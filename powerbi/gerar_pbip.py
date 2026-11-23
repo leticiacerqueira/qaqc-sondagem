@@ -295,9 +295,29 @@ def gerar_relatorio():
                            "outspace": [{"properties": {"color": cor(FUNDO)}}]}}
         secoes.append({"name": sid, "displayName": nome, "displayOption": 1, "width": 1280, "height": 720, "ordinal": i,
                        "config": json.dumps(cfg), "filters": "[]", "visualContainers": vis})
-    rep = {"config": json.dumps({"version": "5.43", "activeSectionIndex": 0, "defaultDrillFilterOtherVisuals": True,
+    # tema: o Power BI exige um tema base (e aceita um personalizado por cima) guardado em StaticResources
+    tema = {"name": "Sondagem", "dataColors": [AZUL, "#EB6834", "#1BAF7A", NAVY, "#8A94A6", "#E0A548", "#6F4BD8", "#C93A3A"],
+            "background": "#FFFFFF", "foreground": NAVY, "tableAccent": AZUL, "good": "#1D7F47", "bad": "#C93A3A", "neutral": "#8A94A6",
+            "textClasses": {"callout": {"fontSize": 22, "fontFace": "Segoe UI Semibold", "color": NAVY},
+                            "title": {"fontSize": 11, "fontFace": "Segoe UI Semibold", "color": NAVY},
+                            "header": {"fontSize": 11, "fontFace": "Segoe UI Semibold", "color": NAVY},
+                            "label": {"fontSize": 9, "fontFace": "Segoe UI", "color": "#5B6675"}}}
+    base = rp / "StaticResources" / "SharedResources" / "BaseThemes"; base.mkdir(parents=True)
+    (base / "CY24SU10.json").write_text(json.dumps({**tema, "name": "CY24SU10"}, indent=2), encoding="utf-8")
+    reg = rp / "StaticResources" / "RegisteredResources"; reg.mkdir(parents=True)
+    (reg / "Sondagem.json").write_text(json.dumps(tema, indent=2), encoding="utf-8")
+    rep = {"config": json.dumps({"version": "5.61",
+                                 "themeCollection": {"baseTheme": {"name": "CY24SU10", "version": "5.61", "type": 2},
+                                                     "customTheme": {"name": "Sondagem.json", "version": "5.61", "type": 1}},
+                                 "activeSectionIndex": 0, "defaultDrillFilterOtherVisuals": True,
                                  "settings": {"useStylableVisualContainerHeader": True, "exportDataMode": 1}}),
-           "layoutOptimization": 0, "sections": secoes, "filters": "[]"}
+           "layoutOptimization": 0,
+           "resourcePackages": [
+               {"resourcePackage": {"name": "SharedResources", "type": 2, "disabled": False,
+                                    "items": [{"type": 202, "path": "BaseThemes/CY24SU10.json", "name": "CY24SU10"}]}},
+               {"resourcePackage": {"name": "RegisteredResources", "type": 1, "disabled": False,
+                                    "items": [{"type": 201, "path": "Sondagem.json", "name": "Sondagem.json"}]}}],
+           "sections": secoes, "filters": "[]"}
     (rp / "report.json").write_text(json.dumps(rep, ensure_ascii=False, indent=1), encoding="utf-8")
 
 if __name__ == "__main__":

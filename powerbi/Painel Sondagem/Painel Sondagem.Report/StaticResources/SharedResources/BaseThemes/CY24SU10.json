@@ -1,0 +1,41 @@
+{
+  "name": "CY24SU10",
+  "dataColors": [
+    "#1F6FD1",
+    "#EB6834",
+    "#1BAF7A",
+    "#0B1F3A",
+    "#8A94A6",
+    "#E0A548",
+    "#6F4BD8",
+    "#C93A3A"
+  ],
+  "background": "#FFFFFF",
+  "foreground": "#0B1F3A",
+  "tableAccent": "#1F6FD1",
+  "good": "#1D7F47",
+  "bad": "#C93A3A",
+  "neutral": "#8A94A6",
+  "textClasses": {
+    "callout": {
+      "fontSize": 22,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0B1F3A"
+    },
+    "title": {
+      "fontSize": 11,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0B1F3A"
+    },
+    "header": {
+      "fontSize": 11,
+      "fontFace": "Segoe UI Semibold",
+      "color": "#0B1F3A"
+    },
+    "label": {
+      "fontSize": 9,
+      "fontFace": "Segoe UI",
+      "color": "#5B6675"
+    }
+  }
+}
