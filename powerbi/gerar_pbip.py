@@ -50,6 +50,7 @@ RETURN IF ( ISFILTERED ( dim_sonda[sonda] ), m * DIVIDE ( COUNTROWS ( VALUES ( d
         ("Horas Operando", "CALCULATE ( SUM ( fato_turnos[horas_operacao] ), fato_turnos[turno_valido] = 1 )", "#,0"),
         ("Horas Paradas", "CALCULATE ( SUM ( fato_turnos[horas_parada] ), fato_turnos[turno_valido] = 1 )", "#,0"),
         ("Produtividade (m/h)", """DIVIDE ( CALCULATE ( [Metros Perfurados], fato_turnos[turno_valido] = 1 ), [Horas Operando] )""", "0.00"),
+        ("Produtividade Mensal (m/h)", "IF ( [Horas Operando] >= 30, [Produtividade (m/h)] )", "0.00"),   # meses com menos de 30 h operando ficam fora
         ("Disponibilidade %", "DIVIDE ( [Horas Operando], [Horas Operando] + [Horas Paradas] )", "0.0%"),
         ("Metros por Turno", """DIVIDE ( CALCULATE ( [Metros Perfurados], fato_turnos[turno_valido] = 1 ),
     CALCULATE ( COUNTROWS ( fato_turnos ), fato_turnos[turno_valido] = 1 ) )""", "0.0"),
@@ -223,8 +224,9 @@ def forma(nome, x, y, w, h, c, z=0):
         "outline": [{"properties": {"show": lit("false")}}]})
 
 def card(nome, x, y, w, rotulo, t, med):
+    tam = "13D" if med == "Principal Parada" else "22D"   # texto longo cabe em fonte menor
     return visual(nome, "card", x, y, w, 92, {"Values": [(t, med, "m")]}, objetos={
-        "labels": [{"properties": {"color": cor(NAVY), "fontSize": lit("22D"), "labelDisplayUnits": lit("1D")}}],
+        "labels": [{"properties": {"color": cor(NAVY), "fontSize": lit(tam), "labelDisplayUnits": lit("1D")}}],
         "categoryLabels": [{"properties": {"show": lit("false")}}]}, titulo=rotulo)
 
 def moldura(pagina, titulo, sub):
@@ -275,7 +277,7 @@ def paginas():
     w = (1266 - L - 3 * 10) / 4
     p2 += [card(f"p2_k{i}", round(L + i * (w + 10)), 80, round(w), r, t, m) for i, (r, t, m) in enumerate(kp2)]
     p2.append(visual("p2_prod", "lineChart", L, 184, 1266 - L, 270,
-                     {"Category": [("dCalendario", "Mes", "c")], "Series": [("dim_sonda", "sonda", "c")], "Y": [("fato_turnos", "Produtividade (m/h)", "m")]},
+                     {"Category": [("dCalendario", "Mes", "c")], "Series": [("dim_sonda", "sonda", "c")], "Y": [("fato_turnos", "Produtividade Mensal (m/h)", "m")]},
                      titulo="Produtividade mensal por sonda (m por hora operando)"))
     p2.append(visual("p2_tab", "tableEx", L, 464, 620, 246,
                      {"Values": [("dim_sonda", "sonda", "c"), ("fato_turnos", "Metros Perfurados", "m"), ("fato_turnos", "Produtividade (m/h)", "m"),

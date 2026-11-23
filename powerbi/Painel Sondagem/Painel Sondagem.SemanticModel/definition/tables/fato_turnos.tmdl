@@ -95,6 +95,10 @@ table fato_turnos
 		formatString: 0.00
 		lineageTag: 3461acec-9271-59e4-9c35-43bac755df5a
 
+	measure 'Produtividade Mensal (m/h)' = IF ( [Horas Operando] >= 30, [Produtividade (m/h)] )
+		formatString: 0.00
+		lineageTag: f990bdb9-5dc8-5cc2-8b32-143c490c53bf
+
 	measure 'Disponibilidade %' = DIVIDE ( [Horas Operando], [Horas Operando] + [Horas Paradas] )
 		formatString: 0.0%
 		lineageTag: 804d9d97-9808-51bb-97df-83d60dad0e9d
