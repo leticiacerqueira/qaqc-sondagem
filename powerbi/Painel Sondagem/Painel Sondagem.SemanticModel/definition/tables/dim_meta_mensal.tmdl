@@ -1,0 +1,33 @@
+table dim_meta_mensal
+	lineageTag: d5cee0ff-42d8-5978-9ef2-f5dc64ce149c
+
+	column mes
+		dataType: string
+		summarizeBy: none
+		lineageTag: fc25a0a5-bb9d-5151-8b3b-21a8f1008256
+		sourceColumn: mes
+
+	column meta_m
+		dataType: int64
+		summarizeBy: sum
+		lineageTag: d0ff0050-e253-58af-8618-163bf02c7b60
+		sourceColumn: meta_m
+
+	column data
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		summarizeBy: none
+		lineageTag: 38afe36c-2f46-5158-9b03-9f1a24e05738
+		sourceColumn: data
+
+
+	partition dim_meta_mensal = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(Web.Contents("https://raw.githubusercontent.com/leticiacerqueira/qaqc-sondagem/main/saida/powerbi/dim_meta_mensal.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalhos, {{"mes", type text}, {"meta_m", Int64.Type}, {"data", type date}}, "en-US")
+				in
+				    Tipos
+

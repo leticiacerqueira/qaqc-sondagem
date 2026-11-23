@@ -1,0 +1,52 @@
+table dCalendario
+	lineageTag: 8bfccf9c-304c-569b-9742-7d60aceeddc8
+	dataCategory: Time
+
+	column Data
+		isKey
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		summarizeBy: none
+		lineageTag: 9047df9e-3538-5262-93dd-1327dfaf4203
+		sourceColumn: Data
+
+	column Ano
+		dataType: int64
+		summarizeBy: sum
+		lineageTag: d75f33f0-eac4-59f5-8322-9c35fc709564
+		sourceColumn: Ano
+
+	column 'Mes Num'
+		dataType: int64
+		summarizeBy: sum
+		lineageTag: 861d3f86-f5cb-53d2-addb-6f0a59f6a8bb
+		sourceColumn: Mes Num
+
+	column Mes
+		dataType: string
+		summarizeBy: none
+		lineageTag: 1f495a23-79f4-556e-b930-5cf4ad82a918
+		sourceColumn: Mes
+		sortByColumn: 'Ano-Mes'
+
+	column 'Ano-Mes'
+		dataType: string
+		summarizeBy: none
+		lineageTag: 65f2653f-277c-54c5-927b-363dff961260
+		sourceColumn: Ano-Mes
+
+
+	partition dCalendario = m
+		mode: import
+		source =
+				let
+				    Datas = List.Dates(#date(2024, 3, 1), Duration.Days(#date(2026, 4, 30) - #date(2024, 3, 1)) + 1, #duration(1, 0, 0, 0)),
+				    Tabela = Table.FromList(Datas, Splitter.SplitByNothing(), {"Data"}),
+				    Ano = Table.AddColumn(Tabela, "Ano", each Date.Year([Data]), Int64.Type),
+				    MesNum = Table.AddColumn(Ano, "Mes Num", each Date.Month([Data]), Int64.Type),
+				    Mes = Table.AddColumn(MesNum, "Mes", each {"jan","fev","mar","abr","mai","jun","jul","ago","set","out","nov","dez"}{Date.Month([Data]) - 1} & "/" & Text.End(Text.From(Date.Year([Data])), 2), type text),
+				    AnoMes = Table.AddColumn(Mes, "Ano-Mes", each Date.ToText([Data], "yyyy-MM"), type text),
+				    Tipos = Table.TransformColumnTypes(AnoMes, {{"Data", type date}})
+				in
+				    Tipos
+

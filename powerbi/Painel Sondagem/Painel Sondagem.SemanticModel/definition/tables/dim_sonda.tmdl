@@ -1,0 +1,20 @@
+table dim_sonda
+	lineageTag: 33ae9077-78df-5caf-b7ff-a8648d0afb70
+
+	column sonda
+		dataType: string
+		summarizeBy: none
+		lineageTag: e276674a-5460-5962-bdce-cb7f5067ba59
+		sourceColumn: sonda
+
+
+	partition dim_sonda = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(Web.Contents("https://raw.githubusercontent.com/leticiacerqueira/qaqc-sondagem/main/saida/powerbi/dim_sonda.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalhos, {{"sonda", type text}}, "en-US")
+				in
+				    Tipos
+

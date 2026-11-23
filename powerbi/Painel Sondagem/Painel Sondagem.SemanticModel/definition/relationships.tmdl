@@ -1,0 +1,27 @@
+relationship e5f5a109-08ae-5528-a8a2-d28162998678
+	fromColumn: fato_turnos.data
+	toColumn: dCalendario.Data
+
+relationship 8196cd6e-d7b6-5d1d-96de-1a53068ed604
+	fromColumn: fato_manobras.data
+	toColumn: dCalendario.Data
+
+relationship a9b740fe-7389-5d5e-9672-5c43c5f8f3b2
+	fromColumn: dim_meta_mensal.data
+	toColumn: dCalendario.Data
+
+relationship a047e56c-977e-52f3-981a-3c3af86341bd
+	fromColumn: fato_turnos.sonda
+	toColumn: dim_sonda.sonda
+
+relationship 6657f029-1b49-5aa0-88df-ef2ce0b5a5cf
+	fromColumn: fato_manobras.sonda
+	toColumn: dim_sonda.sonda
+
+relationship fe16a12f-12c3-553c-ac98-cb9d9fabd4b9
+	fromColumn: fato_turnos.furo
+	toColumn: dim_furo.furo
+
+relationship 6f5ea68e-56a4-5b12-af95-ea5d46583c40
+	fromColumn: fato_manobras.furo
+	toColumn: dim_furo.furo

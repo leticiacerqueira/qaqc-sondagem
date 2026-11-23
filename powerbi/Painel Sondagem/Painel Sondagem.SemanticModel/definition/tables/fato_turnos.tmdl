@@ -1,0 +1,126 @@
+table fato_turnos
+	lineageTag: 03c13e20-8001-514c-8ace-17798d1e65cd
+
+	column data
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		summarizeBy: none
+		lineageTag: 57d6da7d-c048-55ea-8de6-29892e554eb8
+		sourceColumn: data
+
+	column turno
+		dataType: string
+		summarizeBy: none
+		lineageTag: 23fa0705-4c00-51a6-b84c-480dcc523f0c
+		sourceColumn: turno
+
+	column sonda
+		dataType: string
+		summarizeBy: none
+		lineageTag: 8ccad714-f670-5b55-9286-04c2ce3a49e5
+		sourceColumn: sonda
+
+	column furo
+		dataType: string
+		summarizeBy: none
+		lineageTag: 1492c840-ecac-5df1-b48d-a424a11efa7f
+		sourceColumn: furo
+
+	column horas_operacao
+		dataType: double
+		summarizeBy: sum
+		lineageTag: b2cb0e6b-dd77-5543-ad5c-27341fec1c71
+		sourceColumn: horas_operacao
+
+	column horas_parada
+		dataType: double
+		summarizeBy: sum
+		lineageTag: bd760b16-7244-5f32-b221-ecd0e7a57933
+		sourceColumn: horas_parada
+
+	column motivo_parada
+		dataType: string
+		summarizeBy: none
+		lineageTag: 72d12ab4-56bf-516d-a57f-61c096e0e519
+		sourceColumn: motivo_parada
+
+	column metros_perfurados
+		dataType: double
+		summarizeBy: sum
+		lineageTag: f1d03bfa-90d6-5b19-9be7-7fb4c909fe22
+		sourceColumn: metros_perfurados
+
+	column turno_valido
+		dataType: int64
+		summarizeBy: none
+		lineageTag: 08e7d2be-890d-5467-a4e3-d7ca90bc6ef7
+		sourceColumn: turno_valido
+
+
+	measure 'Metros Perfurados' = SUM ( fato_turnos[metros_perfurados] )
+		formatString: #,0
+		lineageTag: 9423e2f0-431e-5f41-8ba1-e3164e2a2482
+
+	measure 'Meta (m)' =
+			VAR m = SUM ( dim_meta_mensal[meta_m] )
+			RETURN IF ( ISFILTERED ( dim_sonda[sonda] ), m * DIVIDE ( COUNTROWS ( VALUES ( dim_sonda[sonda] ) ), 3 ), m )
+		formatString: #,0
+		lineageTag: cccbe4eb-d155-5f8e-a379-a055c79e490f
+
+	measure '% da Meta' = DIVIDE ( [Metros Perfurados], [Meta (m)] )
+		formatString: 0.0%
+		lineageTag: a0902d13-5b34-5a4a-9f77-b839ba51b50f
+
+	measure 'Metros Acumulados' =
+			CALCULATE ( [Metros Perfurados],
+			    FILTER ( ALL ( dCalendario[Data] ), dCalendario[Data] <= MAX ( dCalendario[Data] ) ) )
+		formatString: #,0
+		lineageTag: d84a0d4e-6c92-56fc-a19f-c9ccf2cfb320
+
+	measure 'Meta Acumulada' =
+			CALCULATE ( [Meta (m)],
+			    FILTER ( ALL ( dCalendario[Data] ), dCalendario[Data] <= MAX ( dCalendario[Data] ) ) )
+		formatString: #,0
+		lineageTag: 8d682893-8593-5ce2-a7a3-365e6c166cb3
+
+	measure 'Horas Operando' = CALCULATE ( SUM ( fato_turnos[horas_operacao] ), fato_turnos[turno_valido] = 1 )
+		formatString: #,0
+		lineageTag: 6b9828e4-8e8f-5947-94bd-8ceea836ac65
+
+	measure 'Horas Paradas' = CALCULATE ( SUM ( fato_turnos[horas_parada] ), fato_turnos[turno_valido] = 1 )
+		formatString: #,0
+		lineageTag: dfa9aa90-ec8f-5802-955a-d3e8f64dba92
+
+	measure 'Produtividade (m/h)' = DIVIDE ( CALCULATE ( [Metros Perfurados], fato_turnos[turno_valido] = 1 ), [Horas Operando] )
+		formatString: 0.00
+		lineageTag: 3461acec-9271-59e4-9c35-43bac755df5a
+
+	measure 'Disponibilidade %' = DIVIDE ( [Horas Operando], [Horas Operando] + [Horas Paradas] )
+		formatString: 0.0%
+		lineageTag: 804d9d97-9808-51bb-97df-83d60dad0e9d
+
+	measure 'Metros por Turno' =
+			DIVIDE ( CALCULATE ( [Metros Perfurados], fato_turnos[turno_valido] = 1 ),
+			    CALCULATE ( COUNTROWS ( fato_turnos ), fato_turnos[turno_valido] = 1 ) )
+		formatString: 0.0
+		lineageTag: 9bdc35dc-5a52-561c-8f1c-e0b6fd04002f
+
+	measure '% das Horas Paradas' = DIVIDE ( [Horas Paradas], CALCULATE ( [Horas Paradas], ALL ( fato_turnos[motivo_parada] ) ) )
+		formatString: 0%
+		lineageTag: a4aa969c-f56e-5877-87a3-5f5b47e2a8d5
+
+	measure 'Principal Parada' =
+			VAR t = TOPN ( 1, FILTER ( VALUES ( fato_turnos[motivo_parada] ), fato_turnos[motivo_parada] <> "Sem parada" ), [Horas Paradas], DESC )
+			RETURN CONCATENATEX ( t, fato_turnos[motivo_parada], ", " )
+		lineageTag: 478aeea2-0462-5b61-b607-423130a1b335
+
+	partition fato_turnos = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(Web.Contents("https://raw.githubusercontent.com/leticiacerqueira/qaqc-sondagem/main/saida/powerbi/fato_turnos.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalhos, {{"data", type date}, {"turno", type text}, {"sonda", type text}, {"furo", type text}, {"horas_operacao", type number}, {"horas_parada", type number}, {"motivo_parada", type text}, {"metros_perfurados", type number}, {"turno_valido", Int64.Type}}, "en-US")
+				in
+				    Tipos
+

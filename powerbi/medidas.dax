@@ -1,0 +1,107 @@
+// Medidas DAX do painel de sondagem (Power BI)
+// Crie uma tabela vazia "_Medidas" (Inserir dados > OK) e cole cada medida em Nova medida.
+// Tabelas: fato_turnos, fato_manobras, dim_furo, dim_sonda, dim_meta_mensal, dim_lote_qaqc, dCalendario.
+
+// ---------- tabela calendário (Modelagem > Nova tabela)
+dCalendario =
+ADDCOLUMNS (
+    CALENDAR ( DATE ( 2024, 3, 1 ), DATE ( 2026, 4, 30 ) ),
+    "Ano", YEAR ( [Date] ),
+    "Mes Num", MONTH ( [Date] ),
+    "Mes", FORMAT ( [Date], "mmm/yy" ),
+    "Ano-Mes", FORMAT ( [Date], "yyyy-mm" )
+)
+// Classifique a coluna Mes pela coluna Ano-Mes (Ferramentas de coluna > Classificar por coluna).
+
+// ---------- avanço
+Metros Perfurados = SUM ( fato_turnos[metros_perfurados] )
+
+Meta (m) =
+VAR m = SUM ( dim_meta_mensal[meta_m] )
+RETURN
+    IF (
+        ISFILTERED ( dim_sonda[sonda] ),
+        m * DIVIDE ( COUNTROWS ( VALUES ( dim_sonda[sonda] ) ), 3 ),   // cada sonda responde por 1/3 da meta
+        m
+    )
+
+% da Meta = DIVIDE ( [Metros Perfurados], [Meta (m)] )
+
+Metros Acumulados =
+CALCULATE (
+    [Metros Perfurados],
+    FILTER ( ALL ( dCalendario[Date] ), dCalendario[Date] <= MAX ( dCalendario[Date] ) )
+)
+
+Meta Acumulada =
+CALCULATE (
+    [Meta (m)],
+    FILTER ( ALL ( dCalendario[Date] ), dCalendario[Date] <= MAX ( dCalendario[Date] ) )
+)
+
+Desvio Acumulado (m) = [Metros Acumulados] - [Meta Acumulada]
+
+// ---------- produtividade e disponibilidade (turnos com mais de 12 h ficam fora das contas de horas)
+Horas Operando = CALCULATE ( SUM ( fato_turnos[horas_operacao] ), fato_turnos[turno_valido] = 1 )
+
+Horas Paradas = CALCULATE ( SUM ( fato_turnos[horas_parada] ), fato_turnos[turno_valido] = 1 )
+
+Produtividade (m/h) =
+DIVIDE (
+    CALCULATE ( [Metros Perfurados], fato_turnos[turno_valido] = 1 ),
+    [Horas Operando]
+)
+
+Disponibilidade % = DIVIDE ( [Horas Operando], [Horas Operando] + [Horas Paradas] )
+
+Metros por Turno =
+DIVIDE (
+    CALCULATE ( [Metros Perfurados], fato_turnos[turno_valido] = 1 ),
+    CALCULATE ( COUNTROWS ( fato_turnos ), fato_turnos[turno_valido] = 1 )
+)
+
+Principal Parada =
+VAR t =
+    TOPN (
+        1,
+        FILTER ( VALUES ( fato_turnos[motivo_parada] ), fato_turnos[motivo_parada] <> "Sem parada" ),
+        [Horas Paradas], DESC
+    )
+RETURN CONCATENATEX ( t, fato_turnos[motivo_parada], ", " )
+
+% das Horas Paradas =
+DIVIDE ( [Horas Paradas], CALCULATE ( [Horas Paradas], ALL ( fato_turnos[motivo_parada] ) ) )
+
+// ---------- recuperação de testemunho (manobras com mais de 100% são erro de boletim e ficam fora)
+Recuperação % =
+DIVIDE (
+    CALCULATE ( SUM ( fato_manobras[recuperado_m] ), fato_manobras[boletim_valido] = 1 ),
+    CALCULATE ( SUM ( fato_manobras[metros_perfurados] ), fato_manobras[boletim_valido] = 1 )
+)
+
+Recuperação Zona Mineralizada % = CALCULATE ( [Recuperação %], fato_manobras[zona_mineralizada] = 1 )
+
+Metros na Zona Mineralizada =
+CALCULATE (
+    SUM ( fato_manobras[metros_perfurados] ),
+    fato_manobras[zona_mineralizada] = 1, fato_manobras[boletim_valido] = 1
+)
+
+Meta Recuperação = 0.9
+
+Furos Abaixo da Meta =
+COUNTROWS (
+    FILTER (
+        VALUES ( fato_manobras[furo] ),
+        VAR r = [Recuperação Zona Mineralizada %]
+        RETURN NOT ISBLANK ( r ) && r < [Meta Recuperação]   // furo sem zona mineralizada não conta
+    )
+)
+
+Cor Recuperação =   // formatação condicional: Cor de fundo > Valor do campo
+IF ( [Recuperação Zona Mineralizada %] < [Meta Recuperação], "#C93A3A", "#1D7F47" )
+
+// ---------- QA/QC
+Lotes = COUNTROWS ( dim_lote_qaqc )
+Lotes Reprovados = CALCULATE ( [Lotes], dim_lote_qaqc[decisao] = "REANALISAR" )
+Furos com Melhor Intercepto Provisório = CALCULATE ( COUNTROWS ( dim_furo ), dim_furo[status_qaqc] = "PROVISORIO" )

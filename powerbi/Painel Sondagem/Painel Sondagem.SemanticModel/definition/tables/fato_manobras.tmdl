@@ -1,0 +1,107 @@
+table fato_manobras
+	lineageTag: 0bd9060c-23e8-580c-aecd-9fc9f9909750
+
+	column furo
+		dataType: string
+		summarizeBy: none
+		lineageTag: 12d96d32-0c8a-5077-8a8a-2b623d823cbe
+		sourceColumn: furo
+
+	column sonda
+		dataType: string
+		summarizeBy: none
+		lineageTag: bcd462b5-8468-54d3-a48c-05daf7d45862
+		sourceColumn: sonda
+
+	column data
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		summarizeBy: none
+		lineageTag: 451a46f9-702e-5bcc-943f-2318fbcc295c
+		sourceColumn: data
+
+	column turno
+		dataType: string
+		summarizeBy: none
+		lineageTag: 9bfe5693-a325-56c5-b23b-351439e5eb37
+		sourceColumn: turno
+
+	column de
+		dataType: double
+		summarizeBy: sum
+		lineageTag: 1390f016-d41a-5b68-9bce-f0b8cee6b62b
+		sourceColumn: de
+
+	column ate
+		dataType: double
+		summarizeBy: sum
+		lineageTag: c6c5f534-6a43-5824-ab3f-d8be1ccd6655
+		sourceColumn: ate
+
+	column recuperado_m
+		dataType: double
+		summarizeBy: sum
+		lineageTag: 3e5233a7-1592-594b-b06f-a702d1a6deb8
+		sourceColumn: recuperado_m
+
+	column litologia
+		dataType: string
+		summarizeBy: none
+		lineageTag: 5139fa55-85d1-52e9-9304-a2a4c98caa42
+		sourceColumn: litologia
+
+	column zona_mineralizada
+		dataType: int64
+		summarizeBy: none
+		lineageTag: 277238e6-a2f3-590d-a10f-8522dae60551
+		sourceColumn: zona_mineralizada
+
+	column metros_perfurados
+		dataType: double
+		summarizeBy: sum
+		lineageTag: 1aa5feda-8c6f-58cf-99ae-dc47c0417861
+		sourceColumn: metros_perfurados
+
+	column boletim_valido
+		dataType: int64
+		summarizeBy: none
+		lineageTag: ef2fd82e-d38d-5125-abb5-94043a896281
+		sourceColumn: boletim_valido
+
+
+	measure 'Recuperação %' =
+			DIVIDE ( CALCULATE ( SUM ( fato_manobras[recuperado_m] ), fato_manobras[boletim_valido] = 1 ),
+			    CALCULATE ( SUM ( fato_manobras[metros_perfurados] ), fato_manobras[boletim_valido] = 1 ) )
+		formatString: 0.0%
+		lineageTag: e1122430-fc17-5408-b71b-29d24a32953e
+
+	measure 'Recuperação Zona Mineralizada %' = CALCULATE ( [Recuperação %], fato_manobras[zona_mineralizada] = 1 )
+		formatString: 0.0%
+		lineageTag: 32b3b04c-df85-53e1-a8cd-af354068a8df
+
+	measure 'Metros na Zona Mineralizada' =
+			CALCULATE ( SUM ( fato_manobras[metros_perfurados] ),
+			    fato_manobras[zona_mineralizada] = 1, fato_manobras[boletim_valido] = 1 )
+		formatString: #,0
+		lineageTag: 56a10040-0608-57d8-b98d-48f14d915252
+
+	measure 'Meta Recuperação' = 0.9
+		formatString: 0%
+		lineageTag: c5ed0787-616f-5e67-a750-4855bda158c9
+
+	measure 'Furos Abaixo da Meta' =
+			COUNTROWS ( FILTER ( VALUES ( fato_manobras[furo] ),
+			    VAR r = [Recuperação Zona Mineralizada %] RETURN NOT ISBLANK ( r ) && r < [Meta Recuperação] ) )
+		formatString: 0
+		lineageTag: 6d163e0b-5966-5ccc-9068-4ff2ef7039b9
+
+	partition fato_manobras = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(Web.Contents("https://raw.githubusercontent.com/leticiacerqueira/qaqc-sondagem/main/saida/powerbi/fato_manobras.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalhos, {{"furo", type text}, {"sonda", type text}, {"data", type date}, {"turno", type text}, {"de", type number}, {"ate", type number}, {"recuperado_m", type number}, {"litologia", type text}, {"zona_mineralizada", Int64.Type}, {"metros_perfurados", type number}, {"boletim_valido", Int64.Type}}, "en-US")
+				in
+				    Tipos
+

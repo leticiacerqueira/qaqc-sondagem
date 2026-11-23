@@ -9,7 +9,7 @@ Este projeto reproduz a rotina de um analista de dados geológicos numa campanha
 Portfólio: https://leticiacerqueira.github.io
 
 ## Ferramentas
-Python (pandas, NumPy, Matplotlib) · SQL (SQLite: CTEs, window functions, gaps and islands)
+Python (pandas, NumPy, Matplotlib) · SQL (SQLite: CTEs, window functions, gaps and islands) · Power BI (DAX, modelo estrela)
 
 ## Etapas
 | Script | O que faz |
@@ -19,6 +19,7 @@ Python (pandas, NumPy, Matplotlib) · SQL (SQLite: CTEs, window functions, gaps 
 | `src/03_qaqc.py` | Cartas de controle dos padrões, gráfico de brancos, precisão das duplicatas de campo (HARD) e decisão por lote: **APROVADO** ou **REANALISAR**. |
 | `src/04_consultas_sql.py` + `sql/consultas.sql` | Carrega tudo num SQLite e calcula interceptos significativos, ranking de furos, teor por litologia, impacto do QA/QC e pendências por furo. |
 | `src/06_painel_html.py` | Gera o **painel interativo** da campanha (`painel/index.html`, HTML único sem dependências), com filtro por sonda e período, indicadores, gráficos com detalhes ao passar o mouse e a caixa de testemunho de cada furo. |
+| `src/07_exportar_powerbi.py` + `powerbi/` | Exporta o modelo estrela (fatos de turnos e manobras, dimensões de furo, sonda, meta e lotes) e gera o **projeto do Power BI** com medidas DAX e 3 páginas ([passo a passo](powerbi/README.md)). |
 | `src/05_kpis_sondagem.py` + `sql/kpis_sondagem.sql` | Valida os boletins diários das sondas (4.327 manobras e 612 turnos) e calcula os KPIs da campanha: avanço x meta, produtividade e disponibilidade por sonda, recuperação de testemunho e horas paradas. Exporta tabelas prontas para Power BI em `saida/kpis/`. |
 
 ## 1. Validação do banco
@@ -111,6 +112,8 @@ python src/03_qaqc.py
 python src/04_consultas_sql.py
 python src/05_kpis_sondagem.py
 python src/06_painel_html.py
+python src/07_exportar_powerbi.py
+python powerbi/gerar_pbip.py
 ```
 
 ## Autora

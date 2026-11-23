@@ -1,0 +1,99 @@
+table dim_furo
+	lineageTag: 23011286-6e1a-5630-8a8b-6d0248e87c02
+
+	column furo
+		dataType: string
+		summarizeBy: none
+		lineageTag: 89c732c9-1a39-538a-a728-d76db6921104
+		sourceColumn: furo
+
+	column este
+		dataType: double
+		summarizeBy: none
+		lineageTag: 8dcbfc97-5de9-5c62-b332-1689156cc770
+		sourceColumn: este
+
+	column norte
+		dataType: double
+		summarizeBy: none
+		lineageTag: 47ced6c4-4a17-59f2-8262-eb76c5d57815
+		sourceColumn: norte
+
+	column cota
+		dataType: double
+		summarizeBy: none
+		lineageTag: d4bdbc97-e446-5b37-ad54-c308b8dcf3c3
+		sourceColumn: cota
+
+	column prof_final
+		dataType: double
+		summarizeBy: sum
+		lineageTag: 3229e073-b165-5f2a-abf9-557033154301
+		sourceColumn: prof_final
+
+	column azimute
+		dataType: double
+		summarizeBy: none
+		lineageTag: e68f4016-e0de-56fc-b517-450db0e755f7
+		sourceColumn: azimute
+
+	column mergulho
+		dataType: double
+		summarizeBy: none
+		lineageTag: 7e59405c-39a0-5e05-b15e-d227a576ba0b
+		sourceColumn: mergulho
+
+	column data_inicio
+		dataType: dateTime
+		formatString: dd/mm/yyyy
+		summarizeBy: none
+		lineageTag: 88cf8dbf-6531-56cb-a2f4-50e3923dc80b
+		sourceColumn: data_inicio
+
+	column sonda
+		dataType: string
+		summarizeBy: none
+		lineageTag: 306854d2-636d-5c2c-bf18-b1bffc8fc8af
+		sourceColumn: sonda
+
+	column intercepto_de_m
+		dataType: double
+		summarizeBy: sum
+		lineageTag: 3ed06ea8-9e98-5d55-824d-45779d353883
+		sourceColumn: intercepto_de_m
+
+	column espessura_m
+		dataType: double
+		summarizeBy: sum
+		lineageTag: fe63fcad-1836-5b1a-9dbf-509b8566a449
+		sourceColumn: espessura_m
+
+	column teor_cg_pct
+		dataType: double
+		summarizeBy: sum
+		lineageTag: f3468004-db26-5e70-be41-51ff0d45deb3
+		sourceColumn: teor_cg_pct
+
+	column pct_metro
+		dataType: double
+		summarizeBy: sum
+		lineageTag: db3e4bf5-545a-5d7f-9397-f7632815b789
+		sourceColumn: pct_metro
+
+	column status_qaqc
+		dataType: string
+		summarizeBy: none
+		lineageTag: 1a4fd90d-a101-5e20-abfd-132868e44749
+		sourceColumn: status_qaqc
+
+
+	partition dim_furo = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(Web.Contents("https://raw.githubusercontent.com/leticiacerqueira/qaqc-sondagem/main/saida/powerbi/dim_furo.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalhos, {{"furo", type text}, {"este", type number}, {"norte", type number}, {"cota", type number}, {"prof_final", type number}, {"azimute", type number}, {"mergulho", type number}, {"data_inicio", type date}, {"sonda", type text}, {"intercepto_de_m", type number}, {"espessura_m", type number}, {"teor_cg_pct", type number}, {"pct_metro", type number}, {"status_qaqc", type text}}, "en-US")
+				in
+				    Tipos
+

@@ -1,0 +1,68 @@
+table dim_lote_qaqc
+	lineageTag: 2191cbd3-3749-538a-b72c-0ab3dc0389b3
+
+	column lote
+		dataType: string
+		summarizeBy: none
+		lineageTag: 04c167a2-6a12-5572-83ba-000eebc2a808
+		sourceColumn: lote
+
+	column padroes
+		dataType: int64
+		summarizeBy: sum
+		lineageTag: 0300282e-025b-5e99-ba5e-85dbf570d965
+		sourceColumn: padroes
+
+	column brancos
+		dataType: int64
+		summarizeBy: sum
+		lineageTag: 1491ddfd-642a-5a13-8eaf-5021f43c1326
+		sourceColumn: brancos
+
+	column z_medio_padroes
+		dataType: double
+		summarizeBy: sum
+		lineageTag: 3a6daed2-9062-5777-9572-f14fc6cd0133
+		sourceColumn: z_medio_padroes
+
+	column decisao
+		dataType: string
+		summarizeBy: none
+		lineageTag: bafc8a35-5936-597c-af68-94b69f9a156d
+		sourceColumn: decisao
+
+	column motivo
+		dataType: string
+		summarizeBy: none
+		lineageTag: e3baee26-0eb6-59c8-b10c-16135da756c4
+		sourceColumn: motivo
+
+	column observacao
+		dataType: string
+		summarizeBy: none
+		lineageTag: b2723711-3767-5947-8099-a1d5bef14b87
+		sourceColumn: observacao
+
+
+	measure Lotes = COUNTROWS ( dim_lote_qaqc )
+		formatString: 0
+		lineageTag: 80af6f73-193b-5a6c-9de7-42a7660427a0
+
+	measure 'Lotes Reprovados' = CALCULATE ( [Lotes], dim_lote_qaqc[decisao] = "REANALISAR" )
+		formatString: 0
+		lineageTag: 8e55d927-0c6e-5edf-9daa-795bbefc49b0
+
+	measure 'Furos com Intercepto Provisório' = CALCULATE ( COUNTROWS ( dim_furo ), dim_furo[status_qaqc] = "PROVISORIO" )
+		formatString: 0
+		lineageTag: dbd4d25f-cfd1-5305-905c-5af41d5f9fcf
+
+	partition dim_lote_qaqc = m
+		mode: import
+		source =
+				let
+				    Fonte = Csv.Document(Web.Contents("https://raw.githubusercontent.com/leticiacerqueira/qaqc-sondagem/main/saida/powerbi/dim_lote_qaqc.csv"), [Delimiter = ",", Encoding = 65001, QuoteStyle = QuoteStyle.Csv]),
+				    Cabecalhos = Table.PromoteHeaders(Fonte, [PromoteAllScalars = true]),
+				    Tipos = Table.TransformColumnTypes(Cabecalhos, {{"lote", type text}, {"padroes", Int64.Type}, {"brancos", Int64.Type}, {"z_medio_padroes", type number}, {"decisao", type text}, {"motivo", type text}, {"observacao", type text}}, "en-US")
+				in
+				    Tipos
+
