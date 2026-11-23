@@ -1,13 +1,13 @@
 """
-QA/QC das análises de Au: padrões certificados, brancos e duplicatas.
+QA/QC das análises de carbono grafítico (Cg %): padrões certificados, brancos e duplicatas.
 
-Pergunta: os teores deste banco são confiáveis o suficiente para entrar
+Pergunta: os teores de grafita deste banco são confiáveis o suficiente para entrar
 numa estimativa de recurso? Quais lotes precisam ser reanalisados?
 
 Critérios usados (referências comuns na indústria, ajustáveis no topo do script):
   Padrão  : falha se fora de ±3 DP do valor certificado, ou 2 seguidos fora de ±2 DP do mesmo lado,
             ou se a média dos padrões do lote ficar além de ±1,5 DP (viés do laboratório)
-  Branco  : falha se Au > 10 x limite de detecção
+  Branco  : falha se Cg > 10 x limite de detecção (0,20% Cg)
   Duplicata de polpa : 90% dos pares com HARD <= 10%
   Duplicata de campo : 90% dos pares com HARD <= 20%
 HARD = metade da diferença relativa absoluta = |A - B| / (A + B).
@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 RAIZ = Path(__file__).resolve().parents[1]
 TR, SAI = RAIZ / "dados/tratados", RAIZ / "saida"
 FIG = SAI / "figuras"; FIG.mkdir(parents=True, exist_ok=True)
-LD = 0.005
+LD = 0.02  # % Cg
 LIM_BRANCO = 10 * LD
 CRIT_HARD = {"DUP_POLPA": 10, "DUP_CAMPO": 20}
 
@@ -37,7 +37,7 @@ plt.rcParams.update({"font.size": 10, "axes.edgecolor": TINTA2, "axes.labelcolor
 ctrl = pd.read_csv(TR / "controle.csv")
 amostras = pd.read_csv(TR / "amostras.csv")
 padroes = pd.read_csv(RAIZ / "dados/brutos/padroes_certificados.csv").set_index("padrao")
-laudo = pd.read_csv(RAIZ / "dados/brutos/laudo_laboratorio.csv", dtype={"au_ppm": str})
+laudo = pd.read_csv(RAIZ / "dados/brutos/laudo_laboratorio.csv", dtype={"cg_pct": str})
 ordem = {a: i for i, a in enumerate(laudo.amostra.drop_duplicates())}   # ordem de análise
 ctrl["ordem"] = ctrl.amostra.map(ordem)
 amostras["ordem"] = amostras.amostra.map(ordem)
@@ -46,7 +46,7 @@ amostras["ordem"] = amostras.amostra.map(ordem)
 pad = ctrl[ctrl.tipo == "PADRAO"].sort_values("ordem").copy()
 pad["certificado"] = pad.referencia.map(padroes.valor_certificado)
 pad["dp"] = pad.referencia.map(padroes.desvio_padrao)
-pad["z"] = (pad.au - pad.certificado) / pad.dp
+pad["z"] = (pad.cg - pad.certificado) / pad.dp
 pad["situacao"] = "OK"
 pad.loc[pad.z.abs() > 2, "situacao"] = "ALERTA_2DP"
 pad.loc[pad.z.abs() > 3, "situacao"] = "FALHA_3DP"
@@ -54,7 +54,7 @@ pad.loc[pad.z.abs() > 3, "situacao"] = "FALHA_3DP"
 # troca de padrão: fora de 3 DP do esperado, mas dentro de 3 DP de outro padrão
 def outro_padrao(r):
     for nome, p in padroes.iterrows():
-        if nome != r.referencia and abs(r.au - p.valor_certificado) <= 3 * p.desvio_padrao:
+        if nome != r.referencia and abs(r.cg - p.valor_certificado) <= 3 * p.desvio_padrao:
             return nome
     return None
 falhas = pad.situacao == "FALHA_3DP"
@@ -67,22 +67,22 @@ for nome, g in pad.groupby("referencia"):
     lado = pd.Series(np.where(g.z > 2, 1, np.where(g.z < -2, -1, 0)), index=g.index)
     pad.loc[g.index, "seq_2dp"] = (lado != 0) & (lado == lado.shift())
 
-vies = (pad.groupby("referencia").apply(lambda g: (g.au.mean() / g.certificado.iloc[0] - 1) * 100,
+vies = (pad.groupby("referencia").apply(lambda g: (g.cg.mean() / g.certificado.iloc[0] - 1) * 100,
         include_groups=False)).rename("vies_pct")
 
 # ================================================================ BRANCOS
 br = ctrl[ctrl.tipo == "BRANCO"].copy()
-seq_lab = pd.concat([amostras[["amostra", "ordem", "au"]], ctrl[["amostra", "ordem", "au"]]]).sort_values("ordem")
-seq_lab["au_anterior"] = seq_lab.au.shift()
-br = br.merge(seq_lab[["amostra", "au_anterior"]], on="amostra", how="left")
-br["falha"] = br.au > LIM_BRANCO
+seq_lab = pd.concat([amostras[["amostra", "ordem", "cg"]], ctrl[["amostra", "ordem", "cg"]]]).sort_values("ordem")
+seq_lab["cg_anterior"] = seq_lab.cg.shift()
+br = br.merge(seq_lab[["amostra", "cg_anterior"]], on="amostra", how="left")
+br["falha"] = br.cg > LIM_BRANCO
 
 # ================================================================ DUPLICATAS
 dup = ctrl[ctrl.tipo.isin(["DUP_CAMPO", "DUP_POLPA"])].merge(
-    amostras[["amostra", "au"]].rename(columns={"amostra": "referencia", "au": "au_original"}),
-    on="referencia", how="left").rename(columns={"au": "au_duplicata"})
-dup["media"] = (dup.au_original + dup.au_duplicata) / 2
-dup["hard"] = (dup.au_original - dup.au_duplicata).abs() / (dup.au_original + dup.au_duplicata) * 100
+    amostras[["amostra", "cg"]].rename(columns={"amostra": "referencia", "cg": "cg_original"}),
+    on="referencia", how="left").rename(columns={"cg": "cg_duplicata"})
+dup["media"] = (dup.cg_original + dup.cg_duplicata) / 2
+dup["hard"] = (dup.cg_original - dup.cg_duplicata).abs() / (dup.cg_original + dup.cg_duplicata) * 100
 dup_val = dup[dup.media >= 10 * LD].copy()
 prec = []
 for tipo, g in dup_val.groupby("tipo"):
@@ -103,7 +103,7 @@ for lote in sorted(set(ctrl.lote)):
     for r in p[p.seq_2dp].itertuples():
         motivos.append(f"{r.referencia} 2 seguidos > 2 DP ({r.amostra})")
     for r in b[b.falha].itertuples():
-        motivos.append(f"branco {r.au:.3f} ppm após amostra de {r.au_anterior:.1f} ppm ({r.amostra})")
+        motivos.append(f"branco {r.cg:.2f}% Cg após amostra de {r.cg_anterior:.1f}% ({r.amostra})")
     obs = [f"etiqueta {r.referencia} com valor de {r.provavel_padrao} ({r.amostra}): corrigir cadastro, não reprova o lote"
            for r in p[p.situacao == "TROCA_DE_PADRAO"].itertuples()]
     vies_lote = (p[p.situacao != "TROCA_DE_PADRAO"].z.mean() if len(p) else np.nan)
@@ -132,20 +132,20 @@ for ax, (nome, p) in zip(axs, padroes.iterrows()):
             ax.axhline(c + sg * k * s, color="#a3a29c" if k == 2 else TINTA2, lw=0.9, ls=ls)
     x = g.ordem
     gv = g[g.situacao != "TROCA_DE_PADRAO"]
-    ax.plot(gv.ordem, gv.au, color=AZUL, lw=1.2, marker="o", ms=4, zorder=3)
+    ax.plot(gv.ordem, gv.cg, color=AZUL, lw=1.2, marker="o", ms=4, zorder=3)
     ruins = g[g.situacao.isin(["FALHA_3DP"]) | g.seq_2dp]
-    ax.scatter(ruins.ordem, ruins.au, s=60, facecolor="none", edgecolor=VERMELHO, lw=1.8, zorder=4,
+    ax.scatter(ruins.ordem, ruins.cg, s=60, facecolor="none", edgecolor=VERMELHO, lw=1.8, zorder=4,
                label="falha (reanalisar lote)")
     tr = g[g.situacao == "TROCA_DE_PADRAO"]
     for r in tr.itertuples():
         ax.scatter([r.ordem], [c + 4.2 * s], marker="^", s=40, color=TINTA2, zorder=4, clip_on=False)
-        ax.annotate(f"valor {r.au:.2f} fora da escala: troca de padrão", (r.ordem, c + 4.2 * s),
+        ax.annotate(f"valor {r.cg:.2f} fora da escala: troca de padrão", (r.ordem, c + 4.2 * s),
                     xytext=(8, 0), textcoords="offset points", fontsize=8, color=TINTA2, va="center",
                     bbox=dict(boxstyle="square,pad=0.2", fc="white", ec="none"))
     lo, hi = c - 4.5 * s, c + 4.5 * s
     ax.set_ylim(lo, hi)
-    ax.set_title(f"{nome}  ·  certificado {c:.3f} ± {s:.3f} ppm  ·  viés médio {vies[nome]:+.1f}%", loc="left")
-    ax.set_ylabel("Au (ppm)")
+    ax.set_title(f"{nome}  ·  certificado {c:.2f} ± {s:.2f}% Cg  ·  viés médio {vies[nome]:+.1f}%", loc="left")
+    ax.set_ylabel("Cg (%)")
     ax.text(1.005, c + 3 * s, "+3 DP", transform=ax.get_yaxis_transform(), fontsize=8, color=TINTA2, va="center")
     ax.text(1.005, c - 3 * s, "−3 DP", transform=ax.get_yaxis_transform(), fontsize=8, color=TINTA2, va="center")
     ax.grid(axis="y", color=GRADE, lw=0.6)
@@ -162,18 +162,18 @@ fig.tight_layout(); fig.savefig(FIG / "cartas_controle_padroes.png"); plt.close(
 # 2) brancos
 fig, ax = plt.subplots(figsize=(10, 3.4))
 ok = br[~br.falha]; ruim = br[br.falha]
-ax.scatter(ok.amostra.map(ordem), ok.au, s=12, color=AZUL, label="branco")
-ax.scatter(ruim.amostra.map(ordem), ruim.au, s=50, facecolor="none", edgecolor=VERMELHO, lw=1.8,
+ax.scatter(ok.amostra.map(ordem), ok.cg, s=12, color=AZUL, label="branco")
+ax.scatter(ruim.amostra.map(ordem), ruim.cg, s=50, facecolor="none", edgecolor=VERMELHO, lw=1.8,
            label="acima do limite")
 for r in ruim.itertuples():
-    ax.annotate(f"{r.au:.2f} ppm, logo após amostra de {r.au_anterior:.1f} ppm",
-                (ordem[r.amostra], r.au), xytext=(8, 0), textcoords="offset points", fontsize=8,
+    ax.annotate(f"{r.cg:.2f}% Cg, logo após amostra de {r.cg_anterior:.1f}%",
+                (ordem[r.amostra], r.cg), xytext=(8, 0), textcoords="offset points", fontsize=8,
                 color=TINTA2, va="center")
 ax.axhline(LIM_BRANCO, color=TINTA2, lw=1, ls=(0, (4, 3)))
 ax.text(1.005, LIM_BRANCO, "10 × LD", transform=ax.get_yaxis_transform(), fontsize=8, color=TINTA2, va="center")
-ax.set_yscale("log"); ax.set_ylabel("Au (ppm, log)")
+ax.set_yscale("log"); ax.set_ylabel("Cg (%, log)")
 ax.set_xlabel("Ordem de análise no laboratório")
-ax.set_title("Brancos: contaminação aparece só depois de amostras com ouro grosso", loc="left")
+ax.set_title("Brancos: contaminação aparece só depois de lentes de grafita maciça", loc="left")
 ax.legend(frameon=False, fontsize=8, loc="upper left"); ax.grid(axis="y", color=GRADE, lw=0.6)
 fig.tight_layout(); fig.savefig(FIG / "brancos.png"); plt.close(fig)
 
@@ -182,12 +182,12 @@ fig, axs = plt.subplots(1, 2, figsize=(10, 4.2))
 ax = axs[0]
 for tipo, cor, rot in [("DUP_CAMPO", LARANJA, "campo"), ("DUP_POLPA", AZUL, "polpa")]:
     g = dup_val[dup_val.tipo == tipo]
-    ax.scatter(g.au_original, g.au_duplicata, s=14, color=cor, alpha=0.8, label=f"duplicata de {rot}",
+    ax.scatter(g.cg_original, g.cg_duplicata, s=14, color=cor, alpha=0.8, label=f"duplicata de {rot}",
                edgecolor="white", lw=0.4)
-lim = [0.04, 60]
+lim = [0.15, 50]
 ax.plot(lim, lim, color=TINTA2, lw=1)
 ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlim(lim); ax.set_ylim(lim)
-ax.set_xlabel("Au original (ppm)"); ax.set_ylabel("Au duplicata (ppm)")
+ax.set_xlabel("Cg original (%)"); ax.set_ylabel("Cg duplicata (%)")
 ax.set_title("Original x duplicata", loc="left"); ax.legend(frameon=False, fontsize=8)
 ax.grid(color=GRADE, lw=0.6)
 ax = axs[1]

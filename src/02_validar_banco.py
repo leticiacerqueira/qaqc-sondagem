@@ -3,7 +3,7 @@ Validação do banco de sondagem antes de qualquer análise.
 
 Cada problema encontrado vira uma linha em saida/log_validacao.csv, com a regra
 que falhou e a ação tomada:
-  CORRIGIDO  -> correção objetiva e rastreável (ex.: sinal do mergulho, ppb -> ppm)
+  CORRIGIDO  -> correção objetiva e rastreável (ex.: sinal do mergulho, ppm -> %)
   REVISAR    -> precisa de decisão de quem conhece o furo (não se corrige no escuro)
 Os dados tratados vão para dados/tratados/.
 """
@@ -15,7 +15,7 @@ import pandas as pd
 RAIZ = Path(__file__).resolve().parents[1]
 BR, TR, SAI = RAIZ / "dados/brutos", RAIZ / "dados/tratados", RAIZ / "saida"
 TR.mkdir(parents=True, exist_ok=True); SAI.mkdir(exist_ok=True)
-LD = 0.005
+LD = 0.02  # % Cg
 log = []
 
 def registra(tabela, chave, regra, detalhe, acao):
@@ -25,7 +25,7 @@ collar = pd.read_csv(BR / "collar.csv")
 survey = pd.read_csv(BR / "survey.csv")
 lit = pd.read_csv(BR / "litologia.csv")
 amostragem = pd.read_csv(BR / "amostragem.csv")
-laudo = pd.read_csv(BR / "laudo_laboratorio.csv", dtype={"au_ppm": str})
+laudo = pd.read_csv(BR / "laudo_laboratorio.csv", dtype={"cg_pct": str, "ct_pct": str})
 ctrl = pd.read_csv(BR / "insercao_controle.csv")
 
 # ======================================================== COLLAR
@@ -85,7 +85,7 @@ def checa_intervalos(df, tabela, chave_extra=None):
     return df
 
 # padroniza códigos de litologia antes de checar
-sinonimos = {"QZ-SULFETO": "QUARTZO-SULFETO"}
+sinonimos = {"XISTO GRAF.": "XISTO GRAFITOSO"}
 lit["lit_original"] = lit.litologia
 lit["litologia"] = lit.litologia.str.strip().str.upper().replace(sinonimos)
 for i in lit.index[lit.litologia != lit.lit_original]:
@@ -109,7 +109,7 @@ amostragem = checa_intervalos(amostragem, "amostragem")
 # ======================================================== LAUDO
 dups = laudo.amostra.duplicated(keep="first")
 for a in laudo.loc[dups, "amostra"]:
-    iguais = laudo.loc[laudo.amostra == a, "au_ppm"].nunique() == 1
+    iguais = len(laudo.loc[laudo.amostra == a, ["cg_pct", "ct_pct"]].drop_duplicates()) == 1
     registra("laudo", a, "Amostra repetida no laudo", "mesmo resultado" if iguais else "resultados diferentes",
              "CORRIGIDO" if iguais else "REVISAR")
 laudo = laudo[~dups].copy()
@@ -125,19 +125,26 @@ def converte(txt):
     if v < 0:
         return LD / 2, "ABAIXO_LD"
     return v, "OK"
-conv = laudo.au_ppm.map(converte)
-laudo["au"] = [c[0] for c in conv]
+conv = laudo.cg_pct.map(converte)
+laudo["cg"] = [c[0] for c in conv]
 laudo["status"] = [c[1] for c in conv]
+laudo["ct"] = [c[0] for c in laudo.ct_pct.map(converte)]
 for r in laudo[laudo.status == "SEM_RESULTADO"].itertuples():
-    registra("laudo", r.amostra, "Sem resultado", f"código '{r.au_ppm}'", "REVISAR")
-for r in laudo[laudo.au_ppm.str.startswith("-") & (laudo.status == "ABAIXO_LD")].itertuples():
-    registra("laudo", r.amostra, "Valor negativo", f"'{r.au_ppm}' tratado como abaixo do LD", "CORRIGIDO")
-# Au acima de 100 g/t sem ser pepita conhecida: provável ppb
-ppb = laudo.au > 100
-for r in laudo[ppb].itertuples():
-    registra("laudo", r.amostra, "Valor fora da faixa", f"{r.au_ppm} parece ppb -> {r.au/1000:.3f} ppm", "CORRIGIDO")
-laudo.loc[ppb, "au"] /= 1000
-laudo.loc[ppb, "status"] = "CONVERTIDO_PPB"
+    registra("laudo", r.amostra, "Sem resultado", f"código '{r.cg_pct}'", "REVISAR")
+for r in laudo[laudo.cg_pct.str.startswith("-") & (laudo.status == "ABAIXO_LD")].itertuples():
+    registra("laudo", r.amostra, "Valor negativo", f"'{r.cg_pct}' tratado como abaixo do LD", "CORRIGIDO")
+# teor acima de 100% é impossível: provável resultado em ppm (1% = 10.000 ppm)
+ppm = laudo.cg > 100
+for r in laudo[ppm].itertuples():
+    registra("laudo", r.amostra, "Teor impossível (> 100%)", f"{r.cg_pct} parece ppm -> {r.cg/10000:.2f}%", "CORRIGIDO")
+laudo.loc[ppm, "cg"] /= 10000
+laudo.loc[ppm, "status"] = "CONVERTIDO_PPM"
+# carbono grafítico não pode ser maior que o carbono total da mesma amostra
+cg_ct = laudo.cg > laudo.ct + 2 * LD
+for r in laudo[cg_ct].itertuples():
+    registra("laudo", r.amostra, "Cg maior que carbono total", f"Cg {r.cg:.2f}% e CT {r.ct:.2f}%: "
+             "provável troca de colunas no laboratório, pedir confirmação", "REVISAR")
+laudo.loc[cg_ct, "status"] = "CG_MAIOR_QUE_CT"
 
 # amostras enviadas x devolvidas
 enviadas = set(amostragem.amostra) | set(ctrl.amostra)
@@ -147,7 +154,7 @@ for a in sorted(set(laudo.amostra) - enviadas):
     registra("laudo", a, "Laudo sem amostra cadastrada", "", "REVISAR")
 
 # ======================================================== TABELAS TRATADAS
-amostras = amostragem.merge(laudo[["amostra", "lote", "au", "status"]], on="amostra", how="left")
+amostras = amostragem.merge(laudo[["amostra", "lote", "cg", "ct", "status"]], on="amostra", how="left")
 amostras["meio"] = (amostras.de + amostras.ate) / 2
 # litologia de cada amostra pelo ponto médio do intervalo
 def lito(row, idx=lit.groupby("furo")):
@@ -157,7 +164,7 @@ def lito(row, idx=lit.groupby("furo")):
     m = g[(g.de <= row.meio) & (g.ate > row.meio)]
     return m.litologia.iloc[-1] if len(m) else None
 amostras["litologia"] = amostras.apply(lito, axis=1)
-controle = ctrl.merge(laudo[["amostra", "au", "status"]], on="amostra", how="left")
+controle = ctrl.merge(laudo[["amostra", "cg", "ct", "status"]], on="amostra", how="left")
 
 collar.to_csv(TR / "collar.csv", index=False)
 survey.to_csv(TR / "survey.csv", index=False)

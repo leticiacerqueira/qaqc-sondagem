@@ -1,5 +1,5 @@
 """
-Gera um banco de sondagem SIMULADO de um projeto de ouro fictício,
+Gera um banco de sondagem SIMULADO de um projeto de grafita fictício,
 no formato em que os dados costumam chegar de campo e do laboratório:
 
   collar.csv            boca dos furos (coordenadas UTM, profundidade, atitude)
@@ -7,7 +7,7 @@ no formato em que os dados costumam chegar de campo e do laboratório:
   litologia.csv         descrição geológica por intervalo
   amostragem.csv        intervalos amostrados e número da amostra (folha de campo)
   insercao_controle.csv amostras de controle inseridas no lote (padrões, brancos, duplicatas)
-  laudo_laboratorio.csv resultado de Au (ppm = g/t) devolvido pelo laboratório, por lote
+  laudo_laboratorio.csv carbono grafítico (Cg %) e carbono total (CT %) devolvidos pelo laboratório, por lote
   padroes_certificados.csv valores certificados dos materiais de referência
 
 Problemas foram inseridos de propósito (como acontece na vida real) para
@@ -22,7 +22,7 @@ rng = np.random.default_rng(42)
 RAIZ = Path(__file__).resolve().parents[1]
 OUT = RAIZ / "dados" / "brutos"
 OUT.mkdir(parents=True, exist_ok=True)
-LD = 0.005  # limite de detecção do método (ppm)
+LD = 0.02  # limite de detecção do método (% Cg)
 gabarito = []
 
 # ---------------------------------------------------------------- collar
@@ -48,7 +48,7 @@ collar["data_inicio"] = datas.strftime("%Y-%m-%d")
 
 # ---------------------------------------------------------------- geologia e teor "verdadeiro"
 def zona_minerio(r):
-    """Zona de quartzo-sulfeto que mergulha para leste: fica mais funda nos furos a leste."""
+    """Camada de xisto grafitoso que mergulha para leste: fica mais funda nos furos a leste."""
     col = (r.este - 381000) / 50
     topo = 45 + col * 22 + rng.normal(0, 4)
     esp = max(2.0, rng.normal(9, 3.5))
@@ -60,16 +60,16 @@ for r in collar.itertuples():
     z0, z1 = zona_minerio(r)
     z0, z1 = round(z0), round(z1)
     gran = r.prof_final - float(rng.integers(15, 40)) if rng.random() < 0.5 else None
-    lims = [(0, sap, "SAPROLITO"), (sap, z0, "XISTO"), (z0, z1, "QUARTZO-SULFETO")]
+    lims = [(0, sap, "SAPROLITO"), (sap, z0, "XISTO"), (z0, z1, "XISTO GRAFITOSO")]
     if gran and gran > z1 + 5:
-        lims += [(z1, gran, "XISTO"), (gran, r.prof_final, "GRANITO")]
+        lims += [(z1, gran, "XISTO"), (gran, r.prof_final, "GNAISSE")]
     else:
         lims += [(z1, r.prof_final, "XISTO")]
     for de, ate, lit in lims:
         if ate > de and de < r.prof_final:
             registros_lit.append(dict(furo=r.furo, de=float(de), ate=float(min(ate, r.prof_final)), litologia=lit))
     centro = 1 - abs((r.norte - 8805175) / 250)  # teor maior no meio do corpo
-    teor_real[r.furo] = (z0, z1, 1.2 + 3.0 * max(centro, 0))
+    teor_real[r.furo] = (z0, z1, 4.5 + 6.0 * max(centro, 0))
 lit = pd.DataFrame(registros_lit)
 
 # ---------------------------------------------------------------- amostragem (1 m) e teor verdadeiro
@@ -79,22 +79,22 @@ for r in collar.itertuples():
     for de in np.arange(0, r.prof_final, 1.0):
         meio = de + 0.5
         if z0 <= meio < z1:
-            g = rng.lognormal(np.log(media), 0.9)
+            g = min(rng.lognormal(np.log(media), 0.45), 35)
         elif z0 - 4 <= meio < z1 + 4:          # halo
-            g = rng.lognormal(np.log(0.12), 0.8)
+            g = rng.lognormal(np.log(0.9), 0.5)
         else:
-            g = rng.lognormal(np.log(0.008), 0.9)
+            g = rng.lognormal(np.log(0.10), 0.7)
         am.append(dict(furo=r.furo, de=de, ate=de + 1.0, g=g))
 am = pd.DataFrame(am)
-# algumas pepitas de alto teor (ouro grosso)
-idx = am.index[am.g > 2].to_series().sample(3, random_state=1)
-am.loc[idx, "g"] = [18.4, 24.9, 31.2]
+# algumas lentes de grafita maciça (teor muito alto)
+idx = am.index[am.g > 6].to_series().sample(6, random_state=1)
+am.loc[idx, "g"] = [24.6, 27.9, 31.4, 26.2, 29.0, 33.5]
 
 # ---------------------------------------------------------------- lotes e inserção de controles
 padroes = pd.DataFrame([
-    dict(padrao="PAD-BAIXO", valor_certificado=0.520, desvio_padrao=0.024),
-    dict(padrao="PAD-MEDIO", valor_certificado=1.850, desvio_padrao=0.071),
-    dict(padrao="PAD-ALTO", valor_certificado=5.100, desvio_padrao=0.165),
+    dict(padrao="PAD-BAIXO", valor_certificado=2.10, desvio_padrao=0.06),
+    dict(padrao="PAD-MEDIO", valor_certificado=6.45, desvio_padrao=0.15),
+    dict(padrao="PAD-ALTO", valor_certificado=14.80, desvio_padrao=0.30),
 ])
 pmap = padroes.set_index("padrao")
 
@@ -115,7 +115,7 @@ for i, r in am.iterrows():
     am.at[i, "amostra"] = sid
     fluxo.append(dict(amostra=sid, lote=lote_n, tipo="ROTINA", ref=None, g=r.g))
     no_lote += 1
-    if r.g > 15:                                # ouro visível: geólogo insere branco logo depois
+    if r.g > 20:                                # grafita maciça: geólogo insere branco logo depois
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="BRANCO", ref="BRANCO-QZ", g=None))
     if no_lote % 20 == 0:                       # 1 padrão a cada 20 amostras
         p = ciclo_pad[k_pad % 3]; k_pad += 1
@@ -123,7 +123,7 @@ for i, r in am.iterrows():
     if no_lote % 25 == 0:                       # 1 branco a cada 25
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="BRANCO", ref="BRANCO-QZ", g=None))
     # duplicatas: 1 a cada 30 no estéril e 1 a cada 6 na zona mineralizada (onde a precisão importa)
-    zona = r.g > 0.1
+    zona = r.g > 1.0
     if no_lote % 30 == 0 or (zona and no_lote % 6 == 0):   # duplicata de campo (metade do testemunho)
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="DUP_CAMPO", ref=sid, g=r.g))
     if no_lote % 30 == 15 or (zona and no_lote % 6 == 3):  # duplicata de polpa (mesmo pó, reanálise)
@@ -136,8 +136,8 @@ lotes = sorted(fl.lote.unique())
 
 # ---------------------------------------------------------------- "laboratório"
 vies = {l: 1.0 for l in lotes}
-for l in lotes[20:24]:                          # deriva do laboratório: +6 a +9%
-    vies[l] = 1.06 + 0.01 * (int(l[1:]) - 21)
+for l in lotes[20:24]:                          # deriva do laboratório: +4 a +5,5%
+    vies[l] = 1.04 + 0.005 * (int(l[1:]) - 21)
 gabarito.append(f"Deriva do laboratório (viés positivo) nos lotes {', '.join(lotes[20:24])}")
 
 res = []
@@ -145,50 +145,57 @@ prev_g = 0.0
 for r in fl.itertuples():
     b = vies[r.lote]
     if r.tipo == "ROTINA":
-        v = r.g * np.exp(rng.normal(0, 0.05)) * b
+        v = r.g * np.exp(rng.normal(0, 0.03)) * b
     elif r.tipo == "DUP_CAMPO":
-        v = r.g * np.exp(rng.normal(0, 0.33)) * b
+        v = r.g * np.exp(rng.normal(0, 0.16)) * b
     elif r.tipo == "DUP_POLPA":
-        v = r.g * np.exp(rng.normal(0, 0.07)) * b
+        v = r.g * np.exp(rng.normal(0, 0.04)) * b
     elif r.tipo == "PADRAO":
         c, s = pmap.loc[r.ref]
         v = rng.normal(c, s * 0.9) * b
     else:  # branco
-        v = abs(rng.normal(0.002, 0.0015)) + (prev_g * 0.010 if prev_g > 15 and rng.random() < 0.2 else 0)
+        v = abs(rng.normal(0.008, 0.006)) + (prev_g * 0.011 if prev_g > 20 and rng.random() < 0.1 else 0)
     prev_g = r.g if r.tipo == "ROTINA" else 0.0
     res.append(v)
 fl["v"] = res
 
 # troca de padrão: etiqueta diz MEDIO, mas o pó enviado era o ALTO
 ip = fl.index[(fl.tipo == "PADRAO") & (fl.ref == "PAD-MEDIO") & (fl.lote == "L010")][0]
-fl.at[ip, "v"] = rng.normal(5.1, 0.12)
+fl.at[ip, "v"] = rng.normal(14.8, 0.2)
 gabarito.append(f"Troca de padrão: {fl.at[ip,'amostra']} (L010) etiquetado PAD-MEDIO com valor de PAD-ALTO")
 # falha pontual de padrão (> 3 DP) num lote sem deriva
 ip2 = fl.index[(fl.tipo == "PADRAO") & (fl.ref == "PAD-BAIXO") & (fl.lote == "L031")][0]
-fl.at[ip2, "v"] = 0.61
+fl.at[ip2, "v"] = 2.33
 gabarito.append(f"Padrão fora de 3 DP: {fl.at[ip2,'amostra']} (L031)")
-gabarito.append("Contaminação de branco após amostras de pepita (> 15 g/t)")
+gabarito.append("Contaminação de branco após lentes de grafita maciça (> 20% Cg)")
 
 def formata(v):
     if v < LD:
         return f"<{LD}"
-    return f"{v:.3f}" if v < 10 else f"{v:.2f}"
-fl["au_ppm"] = fl.v.map(formata)
+    return f"{v:.2f}"
+fl["cg_pct"] = fl.v.map(formata)
+# carbono total = carbono grafítico + carbono de carbonatos (o Cg nunca pode passar do CT)
+fl["ct"] = fl.v + rng.lognormal(np.log(0.25), 0.6, len(fl)) + rng.normal(0, 0.02, len(fl))
+fl["ct_pct"] = fl.ct.map(formata)
 
 # ---------------------------------------------------------------- problemas de banco inseridos
 # 1) resultado em ppb (sem conversão) para uma amostra
-i = fl.index[(fl.tipo == "ROTINA") & (fl.v > 1.0)][40]
-fl.at[i, "au_ppm"] = f"{fl.at[i,'v']*1000:.0f}"
-gabarito.append(f"Valor em ppb no lugar de ppm: {fl.at[i,'amostra']}")
+i = fl.index[(fl.tipo == "ROTINA") & (fl.v > 3.0)][40]
+fl.at[i, "cg_pct"] = f"{fl.at[i,'v']*10000:.0f}"
+gabarito.append(f"Valor em ppm no lugar de %: {fl.at[i,'amostra']}")
+# 1b) Cg e CT trocados pelo laboratório em 3 amostras mineralizadas (Cg > CT é impossível)
+for i in fl.index[(fl.tipo == "ROTINA") & (fl.v > 3.0)][[90, 170, 230]]:
+    fl.at[i, "cg_pct"], fl.at[i, "ct_pct"] = fl.at[i, "ct_pct"], fl.at[i, "cg_pct"]
+    gabarito.append(f"Cg e CT trocados: {fl.at[i,'amostra']}")
 # 2) códigos de sem resultado
 for k, cod in zip([500, 1500, 2600], ["-", "IS", "NR"]):  # IS = amostra insuficiente, NR = não recebida
     j = fl.index[fl.tipo == "ROTINA"][k]
-    fl.at[j, "au_ppm"] = cod
+    fl.at[j, "cg_pct"] = cod; fl.at[j, "ct_pct"] = cod
     gabarito.append(f"Sem resultado ({cod}): {fl.at[j,'amostra']}")
 # 3) valor negativo (código antigo de abaixo do LD)
 j = fl.index[fl.tipo == "ROTINA"][3100]
-fl.at[j, "au_ppm"] = "-0.005"
-gabarito.append(f"Valor negativo -0.005: {fl.at[j,'amostra']}")
+fl.at[j, "cg_pct"] = "-0.02"
+gabarito.append(f"Valor negativo -0.02: {fl.at[j,'amostra']}")
 # 4) amostra repetida no laudo
 dup = fl.iloc[[4000]].copy()
 fl = pd.concat([fl.iloc[:4001], dup, fl.iloc[4001:]], ignore_index=True)
@@ -219,10 +226,10 @@ sv.at[k, "azimute"] = sv.at[k, "azimute"] + 38
 gabarito.append("Survey FD-008 a 90 m: salto de azimute (~38°)")
 
 # litologia: grafias diferentes e intervalos com problema
-for f, nome in [("FD-004", "Xisto"), ("FD-021", "xisto "), ("FD-036", "QZ-SULFETO"), ("FD-012", "Saprolito")]:
+for f, nome in [("FD-004", "Xisto"), ("FD-021", "xisto "), ("FD-036", "XISTO GRAF."), ("FD-012", "Saprolito")]:
     m = lit.index[(lit.furo == f)][[1, 2, 0, 0][["FD-004", "FD-021", "FD-036", "FD-012"].index(f)]]
     lit.at[m, "litologia"] = nome
-gabarito.append("Grafias diferentes de litologia (Xisto, 'xisto ', QZ-SULFETO, Saprolito)")
+gabarito.append("Grafias diferentes de litologia (Xisto, 'xisto ', XISTO GRAF., Saprolito)")
 m = lit.index[lit.furo == "FD-014"][1]
 lit.at[m, "de"] = lit.at[m, "de"] - 2
 gabarito.append("FD-014: sobreposição de 2 m na litologia")
@@ -249,7 +256,7 @@ gabarito.append("Amostras com furo 'FD-40' (não existe no collar)")
 
 # ---------------------------------------------------------------- salvar
 ctrl = fl[fl.tipo != "ROTINA"][["amostra", "lote", "tipo", "ref"]].rename(columns={"ref": "referencia"})
-laudo = fl[["lote", "amostra", "au_ppm"]]
+laudo = fl[["lote", "amostra", "cg_pct", "ct_pct"]]
 collar.to_csv(OUT / "collar.csv", index=False)
 sv.to_csv(OUT / "survey.csv", index=False)
 lit.to_csv(OUT / "litologia.csv", index=False)

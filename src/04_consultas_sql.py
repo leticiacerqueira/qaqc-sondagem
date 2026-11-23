@@ -42,18 +42,19 @@ best = res["02_melhor_intercepto_por_furo"]
 fig, ax = plt.subplots(figsize=(7.5, 6.2))
 ax.scatter(collar.este, collar.norte, s=14, color="#c3c2b7", zorder=2, label="furo")
 val = best[best.status_qaqc == "VALIDADO"]; prov = best[best.status_qaqc == "PROVISORIO"]
-esc = 6
-ax.scatter(val.este, val.norte, s=val.grama_metro * esc, color=AZUL, alpha=0.75, edgecolor="white",
+esc = 1.2
+ax.scatter(val.este, val.norte, s=val.pct_metro * esc, color=AZUL, alpha=0.75, edgecolor="white",
            lw=1, zorder=3, label="melhor intercepto, validado")
-ax.scatter(prov.este, prov.norte, s=prov.grama_metro * esc, facecolor="none", edgecolor=AZUL,
-           lw=1.6, ls=(0, (2, 1.5)), zorder=3, label="provisório (lote a reanalisar)")
-for r in best.head(5).itertuples():
-    ax.annotate(f"{r.furo}\n{r.espessura_m:.0f} m @ {r.teor_g_t:.2f} g/t", (r.este, r.norte),
-                xytext=(10, 6), textcoords="offset points", fontsize=8, color=TINTA2)
+ax.scatter(prov.este, prov.norte, s=prov.pct_metro * esc, facecolor="none", edgecolor=AZUL,
+           lw=1.6, ls=(0, (2, 1.5)), zorder=3, label="provisório (reanálise ou Cg > CT)")
+for k, r in enumerate(best.head(5).itertuples()):
+    ax.annotate(f"{r.furo}\n{r.espessura_m:.0f} m @ {r.teor_cg_pct:.1f}% Cg", (r.este, r.norte),
+                xytext=(10, [6, -26, -26, 6, 6][k]), textcoords="offset points", fontsize=8, color=TINTA2,
+                bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.85))
 ax.set_aspect("equal"); ax.ticklabel_format(useOffset=False, style="plain")
 ax.set_xlabel("Este (m, UTM)"); ax.set_ylabel("Norte (m, UTM)")
 ax.set_xlim(collar.este.min() - 40, collar.este.max() + 70)
-ax.set_title("Melhor intercepto por furo (tamanho = grama x metro)", loc="left", fontsize=11)
+ax.set_title("Melhor intercepto por furo (tamanho = teor x espessura)", loc="left", fontsize=11)
 ax.legend(frameon=False, fontsize=8, loc="upper center", bbox_to_anchor=(0.5, -0.12), ncol=3,
           markerscale=0.5)
 fig.tight_layout(); fig.savefig(SAI / "figuras" / "mapa_intercepts.png"); plt.close(fig)
