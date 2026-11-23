@@ -154,7 +154,7 @@ def lit(v):
 def cor(c):
     return {"solid": {"color": lit(f"'{c}'")}}
 
-def visual(nome, tipo, x, y, w, h, campos=None, objetos=None, vc_objetos=None, titulo=None, z=1000):
+def visual(nome, tipo, x, y, w, h, campos=None, objetos=None, vc_objetos=None, titulo=None, z=1000, ordenar=None, excluir=None):
     """campos: {projeção: [(tabela, campo, 'm'|'c')]}"""
     sv = {"visualType": tipo, "drillFilterOtherVisuals": True}
     if campos:
@@ -177,17 +177,39 @@ def visual(nome, tipo, x, y, w, h, campos=None, objetos=None, vc_objetos=None, t
                 proj[papel].append({"queryRef": ref, **({"active": True} if papel == "Category" else {})})
         sv["projections"] = proj
         sv["prototypeQuery"] = {"Version": 2, "From": frm, "Select": sel}
+        if ordenar:   # (tabela, medida): ordena do maior para o menor
+            t, c = ordenar
+            sv["prototypeQuery"]["OrderBy"] = [{"Direction": 2, "Expression": {"Measure": {"Expression": {"SourceRef": {"Source": apelidos[t]}}, "Property": c}}}]
+    objetos = dict(objetos or {})
+    if tipo in ("lineChart", "clusteredColumnChart", "barChart", "clusteredBarChart", "scatterChart"):
+        for eixo in ("categoryAxis", "valueAxis"):   # títulos dos eixos repetem o título do gráfico
+            props = objetos.get(eixo, [{"properties": {}}])[0]["properties"]
+            props["showAxisTitle"] = lit("false")
+            objetos[eixo] = [{"properties": props}]
     if objetos: sv["objects"] = objetos
     vco = dict(vc_objetos or {})
     if titulo:
         vco["title"] = [{"properties": {"show": lit("true"), "text": lit(f"'{titulo}'"),
                                         "fontColor": cor(NAVY), "fontSize": lit("11D"), "bold": lit("true")}}]
-    if tipo not in ("textbox", "basicShape"):
+    if tipo in ("textbox", "basicShape"):
+        vco["background"] = [{"properties": {"show": lit("false")}}]
+        vco["border"] = [{"properties": {"show": lit("false")}}]
+    else:
         vco.setdefault("background", [{"properties": {"show": lit("true"), "color": cor("#FFFFFF"), "transparency": lit("0D")}}])
         vco.setdefault("border", [{"properties": {"show": lit("true"), "color": cor("#E3E7EC"), "radius": lit("6D")}}])
     if vco: sv["vcObjects"] = vco
     cfg = {"name": nome, "layouts": [{"id": 0, "position": {"x": x, "y": y, "z": z, "width": w, "height": h}}], "singleVisual": sv}
-    return {"x": x, "y": y, "z": z, "width": w, "height": h, "config": json.dumps(cfg, ensure_ascii=False), "filters": "[]"}
+    filtros = []
+    if excluir:   # (tabela, coluna, [valores]) filtro do visual: NOT IN
+        t, c, vals = excluir
+        filtros.append({"name": f"{nome}_f", "type": "Categorical", "howCreated": 1,
+                        "expression": {"Column": {"Expression": {"SourceRef": {"Entity": t}}, "Property": c}},
+                        "filter": {"Version": 2, "From": [{"Name": "f", "Entity": t, "Type": 0}],
+                                   "Where": [{"Condition": {"Not": {"Expression": {"In": {
+                                       "Expressions": [{"Column": {"Expression": {"SourceRef": {"Source": "f"}}, "Property": c}}],
+                                       "Values": [[{"Literal": {"Value": f"'{v}'"}}] for v in vals]}}}}}]}})
+    return {"x": x, "y": y, "z": z, "width": w, "height": h, "config": json.dumps(cfg, ensure_ascii=False),
+            "filters": json.dumps(filtros, ensure_ascii=False)}
 
 def texto(nome, x, y, w, h, linhas, z=2000):
     paras = [{"textRuns": [{"value": t, "textStyle": {"fontWeight": "bold" if b else "normal", "fontSize": f"{s}pt", "color": c,
@@ -202,7 +224,7 @@ def forma(nome, x, y, w, h, c, z=0):
 
 def card(nome, x, y, w, rotulo, t, med):
     return visual(nome, "card", x, y, w, 92, {"Values": [(t, med, "m")]}, objetos={
-        "labels": [{"properties": {"color": cor(NAVY), "fontSize": lit("22D")}}],
+        "labels": [{"properties": {"color": cor(NAVY), "fontSize": lit("22D"), "labelDisplayUnits": lit("1D")}}],
         "categoryLabels": [{"properties": {"show": lit("false")}}]}, titulo=rotulo)
 
 def moldura(pagina, titulo, sub):
@@ -215,10 +237,10 @@ def moldura(pagina, titulo, sub):
         v.append(forma(f"{pagina}_bt{i}", 16, 130 + i * 48, 168, 36, AZUL if ativo else "#16305A", z=10 + i))
         v.append(texto(f"{pagina}_btt{i}", 22, 134 + i * 48, 156, 30, [(p, 10, "#FFFFFF", ativo)], z=3000 + i))
     v.append(texto(f"{pagina}_rodape", 14, 640, 176, 60, [("Dados simulados · Leticia Cerqueira", 8, "#AFC3DE", False)]))
-    v.append(texto(f"{pagina}_tit", 222, 12, 420, 56, [(titulo.upper(), 18, NAVY, True), (sub, 9, "#5B6675", False)]))
-    v.append(visual(f"{pagina}_fs", "slicer", 900, 10, 170, 58, {"Values": [("dim_sonda", "sonda", "c")]},
+    v.append(texto(f"{pagina}_tit", 216, 6, 600, 66, [(titulo.upper(), 18, NAVY, True), (sub, 9, "#5B6675", False)]))
+    v.append(visual(f"{pagina}_fs", "slicer", 860, 4, 180, 70, {"Values": [("dim_sonda", "sonda", "c")]},
                     objetos={"data": [{"properties": {"mode": lit("'Dropdown'")}}]}, titulo="Sonda"))
-    v.append(visual(f"{pagina}_fp", "slicer", 1080, 10, 186, 58, {"Values": [("dCalendario", "Data", "c")]},
+    v.append(visual(f"{pagina}_fp", "slicer", 1050, 4, 216, 70, {"Values": [("dCalendario", "Data", "c")]},
                     objetos={"data": [{"properties": {"mode": lit("'Between'")}}]}, titulo="Período"))
     return v
 
@@ -239,7 +261,8 @@ def paginas():
     p1.append(visual("p1_paradas", "barChart", L + 650, 184, 1266 - L - 650, 260,
                      {"Category": [("fato_turnos", "motivo_parada", "c")], "Y": [("fato_turnos", "Horas Paradas", "m")]},
                      objetos={"dataPoint": [{"properties": {"fill": cor(NAVY)}}], "labels": [{"properties": {"show": lit("true")}}]},
-                     titulo="Horas paradas por motivo"))
+                     titulo="Horas paradas por motivo", ordenar=("fato_turnos", "Horas Paradas"),
+                     excluir=("fato_turnos", "motivo_parada", ["Sem parada"])))
     p1.append(visual("p1_mensal", "clusteredColumnChart", L, 454, 1266 - L, 256,
                      {"Category": [("dCalendario", "Mes", "c")], "Y": [("fato_turnos", "Metros Perfurados", "m"), ("fato_turnos", "Meta (m)", "m")]},
                      objetos={"dataPoint": [{"properties": {"fill": cor(AZUL)}, "selector": {"metadata": "fato_turnos.Metros Perfurados"}},
@@ -275,7 +298,8 @@ def paginas():
     p3.append(visual("p3_lit", "barChart", L + 430, 184, 1266 - L - 430, 260,
                      {"Category": [("fato_manobras", "litologia", "c")], "Y": [("fato_manobras", "Recuperação %", "m")]},
                      objetos={"dataPoint": [{"properties": {"fill": cor(NAVY)}}], "labels": [{"properties": {"show": lit("true")}}]},
-                     titulo="Recuperação por litologia"))
+                     titulo="Recuperação por litologia", ordenar=("fato_manobras", "Recuperação %"),
+                     excluir=("fato_manobras", "litologia", ["SEM DESCRIÇÃO"])))
     p3.append(visual("p3_tab", "tableEx", L, 454, 640, 256,
                      {"Values": [("fato_manobras", "furo", "c"), ("fato_manobras", "sonda", "c"), ("fato_manobras", "Metros na Zona Mineralizada", "m"),
                                  ("fato_manobras", "Recuperação Zona Mineralizada %", "m")]},
