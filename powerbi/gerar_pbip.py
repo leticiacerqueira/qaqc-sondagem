@@ -233,7 +233,7 @@ def moldura(pagina, titulo, sub):
     """barra lateral azul-marinho + cabeçalho + filtros, igual em todas as páginas"""
     ps = ["Resumo da Campanha", "Sondas", "Recuperação e QA/QC"]
     v = [forma(f"{pagina}_lado", 0, 0, 200, 720, NAVY),
-         texto(f"{pagina}_marca", 14, 22, 176, 60, [("Painel de Sondagem", 14, "#FFFFFF", True), ("Exploração de grafita · 2024–2026", 9, "#AFC3DE", False)])]
+         texto(f"{pagina}_marca", 14, 18, 180, 96, [("Painel de Sondagem", 14, "#FFFFFF", True), ("Exploração de grafita · 2024–2026", 9, "#AFC3DE", False)])]
     for i, p in enumerate(ps):
         ativo = p == titulo
         v.append(forma(f"{pagina}_bt{i}", 16, 130 + i * 48, 168, 36, AZUL if ativo else "#16305A", z=10 + i))
@@ -241,9 +241,9 @@ def moldura(pagina, titulo, sub):
     v.append(texto(f"{pagina}_rodape", 14, 640, 176, 60, [("Dados simulados · Leticia Cerqueira", 8, "#AFC3DE", False)]))
     v.append(texto(f"{pagina}_tit", 216, 6, 600, 66, [(titulo.upper(), 18, NAVY, True), (sub, 9, "#5B6675", False)]))
     v.append(visual(f"{pagina}_fs", "slicer", 860, 4, 180, 70, {"Values": [("dim_sonda", "sonda", "c")]},
-                    objetos={"data": [{"properties": {"mode": lit("'Dropdown'")}}]}, titulo="Sonda"))
+                    objetos={"data": [{"properties": {"mode": lit("'Dropdown'")}}], "header": [{"properties": {"show": lit("false")}}]}, titulo="Sonda"))
     v.append(visual(f"{pagina}_fp", "slicer", 1050, 4, 216, 70, {"Values": [("dCalendario", "Data", "c")]},
-                    objetos={"data": [{"properties": {"mode": lit("'Between'")}}]}, titulo="Período"))
+                    objetos={"data": [{"properties": {"mode": lit("'Between'")}}], "header": [{"properties": {"show": lit("false")}}]}, titulo="Período"))
     return v
 
 def paginas():
