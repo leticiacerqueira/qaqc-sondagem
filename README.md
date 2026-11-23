@@ -79,7 +79,9 @@ Por litologia, o gnaisse kinzigítico grafitoso concentra a mineralização (mé
 Consultas em [`sql/consultas.sql`](sql/consultas.sql) e resultados em [`saida/sql/`](saida/sql/). A lista de pendências por furo ([`05_pendencias_por_furo.csv`](saida/sql/05_pendencias_por_furo.csv)) é o que vai para a equipe de geologia.
 
 ## 4. KPIs da campanha de sondagem
-**Painel interativo:** https://leticiacerqueira.github.io/painel-sondagem/
+**Painel em Power BI:** https://app.powerbi.com/view?r=eyJrIjoiZWRjYmVmNDgtMzcxNy00MzM0LWIwN2QtYTJjNmUyZDhhMWY3IiwidCI6ImI4YWYwYWFjLTcwMjEtNDcwOS1hYjFmLWU2MzQ1ZTczNTI3OCJ9
+
+**Painel em HTML:** https://leticiacerqueira.github.io/painel-sondagem/
 
 Os boletins diários das sondas (cada manobra do barrilete e as horas de cada turno) passam pela mesma lógica de validação: 2 manobras com **recuperação acima de 100%** e 1 turno com **16 h somadas** num turno de 12 h foram para revisão e ficaram fora dos indicadores ([log](saida/kpis/log_boletins.csv)).
 
