@@ -1,28 +1,28 @@
 Deriva do laboratório (viés positivo) nos lotes L021, L022, L023, L024
-Troca de padrão: AM101883 (L010) etiquetado PAD-MEDIO com valor de PAD-ALTO
-Padrão fora de 3 DP: AM106144 (L031)
+Troca de padrão: AM101877 (L010) etiquetado PAD-MEDIO com valor de PAD-ALTO
+Padrão fora de 3 DP: AM106136 (L031)
 Contaminação de branco após lentes de grafita maciça (> 20% Cg)
-Valor em ppm no lugar de %: AM101272
-Cg e CT trocados: AM102229
-Cg e CT trocados: AM104553
-Cg e CT trocados: AM106586
-Sem resultado (-): AM100568
-Sem resultado (IS): AM101702
-Sem resultado (NR): AM102948
-Valor negativo -0.02: AM103517
+Valor em ppm no lugar de %: AM101079
+Cg e CT trocados: AM102380
+Cg e CT trocados: AM103679
+Cg e CT trocados: AM105421
+Sem resultado (-): AM100566
+Sem resultado (IS): AM101696
+Sem resultado (NR): AM102941
+Valor negativo -0.02: AM103505
 Amostra repetida no laudo: AM104001
-Amostra sem laudo: AM105894
+Amostra sem laudo: AM105885
 FD-017 com este/norte trocados
 FD-029 sem cota
 FD-033 com mergulho positivo no collar
 Survey FD-008 a 90 m: salto de azimute (~38°)
-Grafias diferentes de litologia (Xisto, 'xisto ', XISTO GRAF., Saprolito)
+Grafias diferentes de litologia (Gnaisse kinzigítico grafitoso, sem acento, GN. KINZ. GRAF., Saprolito, PEGMATITO em FD-001)
 FD-014: sobreposição de 2 m na litologia
-FD-025: lacuna de 1,5 m na litologia
+FD-025: lacuna de 1,5 m na litologia, no topo da zona mineralizada
 FD-038: litologia passa da profundidade final
 FD-019: intervalo de amostragem com de > ate
 FD-027: sobreposição de 0,5 m na amostragem
 Amostras com furo 'FD-40' (não existe no collar)
 Boletim: recuperação acima de 100% em FD-003 18.0 m
-Boletim: recuperação acima de 100% em FD-023 99.0 m
-Boletim: turno com mais de 12 h somadas (SD-01 2025-08-12 DIA)
+Boletim: recuperação acima de 100% em FD-022 15.0 m
+Boletim: turno com mais de 12 h somadas (SD-02 2025-04-05 DIA)

@@ -85,7 +85,8 @@ def checa_intervalos(df, tabela, chave_extra=None):
     return df
 
 # padroniza códigos de litologia antes de checar
-sinonimos = {"XISTO GRAF.": "XISTO GRAFITOSO"}
+sinonimos = {"GNAISSE KINZIGITICO GRAFITOSO": "GNAISSE KINZIGÍTICO GRAFITOSO", "GN. KINZ. GRAF.": "GNAISSE KINZIGÍTICO GRAFITOSO",
+             "PEGMATITO": "VEIO PEGMATÓIDE"}
 lit["lit_original"] = lit.litologia
 lit["litologia"] = lit.litologia.str.strip().str.upper().replace(sinonimos)
 for i in lit.index[lit.litologia != lit.lit_original]:

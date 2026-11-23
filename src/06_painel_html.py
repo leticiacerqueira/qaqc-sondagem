@@ -23,18 +23,24 @@ def lito(r):
     return g.litologia.iloc[0] if len(g) else "SEM DESCRIÇÃO"
 man["litologia"] = man.apply(lito, axis=1)
 man["valida"] = man.recuperado_m <= (man.ate - man.de) + 1e-9
+# zona mineralizada = manobra com ponto médio dentro de um intercepto significativo (>= 3% Cg em >= 2 m)
+def na_zona(r):
+    m = (r.de + r.ate) / 2
+    return int(((ints.furo == r.furo) & (ints.de <= m) & (ints.ate > m)).any())
+man["zona"] = man.apply(na_zona, axis=1)
 tur["valido"] = (tur.horas_operacao + tur.horas_parada) <= 12 + 1e-9
 
-LITS = ["SAPROLITO", "XISTO", "XISTO GRAFITOSO", "GNAISSE", "SEM DESCRIÇÃO"]
+LITS = ["SOLO RESIDUAL", "SAPROLITO", "GNAISSE KINZIGÍTICO GRAFITOSO", "VEIO PEGMATÓIDE", "SEM DESCRIÇÃO"]
 furos = sorted(collar.furo)
 dados = {
     "furos": [dict(id=r.furo, sonda=r.sonda, prof=r.prof_final) for r in collar.sort_values("furo").itertuples()],
     "lits": LITS,
+    "metaMensal": int(meta.meta_m.max()), "inicio": str(tur.data.min()),
     "meta": dict(zip(meta.mes, meta.meta_m.astype(int))),
     "turnos": [[r.data, r.turno, r.sonda, r.furo, r.horas_operacao, r.horas_parada, r.motivo_parada if isinstance(r.motivo_parada, str) else "",
                 r.metros_perfurados, int(r.valido)] for r in tur.itertuples()],
-    # [furo_idx, de, ate, recuperado, lit_idx, data, valida]
-    "manobras": [[furos.index(r.furo), r.de, r.ate, r.recuperado_m, LITS.index(r.litologia), r.data, int(r.valida)]
+    # [furo_idx, de, ate, recuperado, lit_idx, data, valida, zona_mineralizada]
+    "manobras": [[furos.index(r.furo), r.de, r.ate, r.recuperado_m, LITS.index(r.litologia), r.data, int(r.valida), r.zona]
                  for r in man.itertuples()],
     "qaqc": dict(lotes=int(len(lotes)), reprovados=int((lotes.decisao == "REANALISAR").sum()),
                  interceptos=int(len(ints)), provisorios=int((ints.status_qaqc == "PROVISORIO").sum()),

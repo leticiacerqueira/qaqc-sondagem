@@ -2,25 +2,26 @@ tabela,chave,regra,detalhe,acao
 collar,FD-017,Coordenadas fora da faixa,este e norte trocados,CORRIGIDO
 collar,FD-029,Campo obrigatório vazio,cota ausente,REVISAR
 collar,FD-033,Collar x survey,mergulho +60 no collar e -60 no survey,CORRIGIDO
-survey,FD-008,Desvio brusco entre leituras,a 90 m: azimute variou 38.8°,REVISAR
-survey,FD-008,Desvio brusco entre leituras,a 120 m: azimute variou 37.7°,REVISAR
-litologia,FD-004,Código fora do padrão,'Xisto' -> XISTO,CORRIGIDO
+survey,FD-008,Desvio brusco entre leituras,a 90 m: azimute variou 39.9°,REVISAR
+survey,FD-008,Desvio brusco entre leituras,a 120 m: azimute variou 38.3°,REVISAR
+litologia,FD-001,Código fora do padrão,'PEGMATITO' -> VEIO PEGMATÓIDE,CORRIGIDO
+litologia,FD-004,Código fora do padrão,'Gnaisse kinzigítico grafitoso' -> GNAISSE KINZIGÍTICO GRAFITOSO,CORRIGIDO
 litologia,FD-012,Código fora do padrão,'Saprolito' -> SAPROLITO,CORRIGIDO
-litologia,FD-021,Código fora do padrão,'xisto ' -> XISTO,CORRIGIDO
-litologia,FD-036,Código fora do padrão,'XISTO GRAF.' -> XISTO GRAFITOSO,CORRIGIDO
-litologia,FD-014,Sobreposição,7.0 m começa antes de 9.0 m,REVISAR
-litologia,FD-025,Lacuna,sem registro entre 129.0 e 130.5 m,REVISAR
+litologia,FD-021,Código fora do padrão,'gnaisse kinzigitico grafitoso ' -> GNAISSE KINZIGÍTICO GRAFITOSO,CORRIGIDO
+litologia,FD-036,Código fora do padrão,'GN. KINZ. GRAF.' -> GNAISSE KINZIGÍTICO GRAFITOSO,CORRIGIDO
+litologia,FD-014,Sobreposição,13.0 m começa antes de 15.0 m,REVISAR
+litologia,FD-025,Lacuna,sem registro entre 50.0 e 51.5 m,REVISAR
 litologia,FD-038,Passa da profundidade final,"vai até 246.0 m, furo tem 240.0 m",CORRIGIDO
 amostragem,FD-40,Furo não existe no collar,'FD-40' -> FD-040,CORRIGIDO
 amostragem,FD-019,de >= ate,56.0 - 55.0,CORRIGIDO
 amostragem,FD-027,Sobreposição,71.0 m começa antes de 71.5 m,REVISAR
 laudo,AM104001,Amostra repetida no laudo,mesmo resultado,CORRIGIDO
-laudo,AM100568,Sem resultado,código '-',REVISAR
-laudo,AM101702,Sem resultado,código 'IS',REVISAR
-laudo,AM102948,Sem resultado,código 'NR',REVISAR
-laudo,AM103517,Valor negativo,'-0.02' tratado como abaixo do LD,CORRIGIDO
-laudo,AM101272,Teor impossível (> 100%),203613 parece ppm -> 20.36%,CORRIGIDO
-laudo,AM102229,Cg maior que carbono total,"Cg 9.21% e CT 9.05%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
-laudo,AM104553,Cg maior que carbono total,"Cg 10.56% e CT 10.40%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
-laudo,AM106586,Cg maior que carbono total,"Cg 7.93% e CT 7.64%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
-laudo,AM105894,Amostra sem laudo,enviada e não devolvida,REVISAR
+laudo,AM100566,Sem resultado,código '-',REVISAR
+laudo,AM101696,Sem resultado,código 'IS',REVISAR
+laudo,AM102941,Sem resultado,código 'NR',REVISAR
+laudo,AM103505,Valor negativo,'-0.02' tratado como abaixo do LD,CORRIGIDO
+laudo,AM101079,Teor impossível (> 100%),30171 parece ppm -> 3.02%,CORRIGIDO
+laudo,AM102380,Cg maior que carbono total,"Cg 8.06% e CT 7.91%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
+laudo,AM103679,Cg maior que carbono total,"Cg 10.70% e CT 10.62%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
+laudo,AM105421,Cg maior que carbono total,"Cg 14.41% e CT 14.14%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
+laudo,AM105885,Amostra sem laudo,enviada e não devolvida,REVISAR

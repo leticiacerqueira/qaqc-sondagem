@@ -18,13 +18,15 @@ import matplotlib.ticker
 RAIZ = Path(__file__).resolve().parents[1]
 BR, TR, SAI = RAIZ / "dados/brutos", RAIZ / "dados/tratados", RAIZ / "saida"
 OUT = SAI / "kpis"; OUT.mkdir(parents=True, exist_ok=True)
-META_MENSAL = 1250          # m/mês planejados para as 3 sondas
+META_MENSAL = 560           # m/mês planejados para as 3 sondas
 META_REC = 0.90             # recuperação mínima na zona mineralizada
 
 man = pd.read_csv(BR / "boletim_manobras.csv")
 tur = pd.read_csv(BR / "boletim_turnos.csv")
 collar = pd.read_csv(TR / "collar.csv")
 lit = pd.read_csv(TR / "litologia.csv")
+# zona mineralizada = intercepts significativos (>= 3% Cg em >= 2 m) calculados em 04_consultas_sql.py
+zona = pd.read_csv(SAI / "sql/01_intercepts_significativos.csv")[["furo", "de", "ate"]]
 
 # ================================================================ validação dos boletins
 log = []
@@ -70,7 +72,7 @@ meta = pd.DataFrame(meta)
 # ================================================================ SQL
 db = TR / "sondagem.db"
 con = sqlite3.connect(db)
-for nome, df in [("manobras", man), ("turnos", tur), ("litologia", lit), ("meta", meta)]:
+for nome, df in [("manobras", man), ("turnos", tur), ("litologia", lit), ("zona_mineralizada", zona), ("meta", meta)]:
     df.to_sql(nome, con, index=False, if_exists="replace")
 sql = (RAIZ / "sql/kpis_sondagem.sql").read_text(encoding="utf-8")
 blocos = re.split(r"^-- name: (\S+)\s*$", sql, flags=re.M)[1:]
@@ -100,20 +102,20 @@ dia = tur.groupby("data").metros_perfurados.sum().cumsum()
 dia.index = pd.to_datetime(dia.index)
 plano = pd.Series({ini + pd.Timedelta(days=d): min(total, META_MENSAL * 12 / 365 * (d + 1))
                    for d in range((dia.index.max() - ini).days + 1)})
-ax.plot(plano.index, plano.values, color=CINZA, lw=2, ls=(0, (4, 3)), label="meta (1.250 m/mês)")
+ax.plot(plano.index, plano.values, color=CINZA, lw=2, ls=(0, (4, 3)), label=f"meta ({META_MENSAL} m/mês)")
 ax.plot(dia.index, dia.values, color=AZUL, lw=2, label="realizado")
 fim_plano = plano[plano >= total].index.min(); fim_real = dia[dia >= total].index.min()
-ax.annotate(f"meta: fim em {fim_plano:%d/%m}", (fim_plano, total), xytext=(-8, 6), textcoords="offset points",
+ax.annotate(f"meta: fim em {fim_plano:%d/%m/%Y}", (fim_plano, total), xytext=(-8, 6), textcoords="offset points",
             ha="right", fontsize=8, color=TINTA2)
 ax.set_ylim(0, total * 1.12)
-ax.annotate(f"realizado em {fim_real:%d/%m}\n({(fim_real - fim_plano).days} dias de atraso)", (fim_real, total),
+ax.annotate(f"realizado em {fim_real:%d/%m/%Y}\n({(fim_real - fim_plano).days} dias de atraso)", (fim_real, total),
             xytext=(-4, -150), textcoords="offset points", ha="right", fontsize=8, color=TINTA2,
             arrowprops=dict(arrowstyle="-", color=CINZA, lw=0.8))
 ax.set_title("Avanço acumulado da campanha (m)", loc="left"); ax.legend(frameon=False, fontsize=8, loc="upper left")
 ax.grid(axis="y", color=GRADE, lw=0.6)
 MES = "jan fev mar abr mai jun jul ago set out nov dez".split()
-ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator())
-ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: MES[matplotlib.dates.num2date(x).month - 1]))
+ax.xaxis.set_major_locator(matplotlib.dates.MonthLocator(bymonth=[1, 4, 7, 10]))
+ax.xaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: f"{MES[matplotlib.dates.num2date(x).month - 1]}/{matplotlib.dates.num2date(x):%y}"))
 ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda x, _: f"{x:,.0f}".replace(",", ".")))
 
 # 2) produtividade por sonda
@@ -135,7 +137,7 @@ for b, r in zip(bars, k5b.itertuples()):
             ha="center", va="top", fontsize=9, color="white", fontweight="bold")
 ax.axhline(META_REC * 100, color=TINTA2, lw=1, ls=(0, (4, 3)))
 ax.text(-0.42, META_REC * 100 + 1.2, "meta 90%", fontsize=8, color=TINTA2, ha="left")
-ax.set_ylim(0, 108); ax.set_title("Recuperação de testemunho no xisto grafitoso, por sonda", loc="left")
+ax.set_ylim(0, 108); ax.set_title("Recuperação na zona mineralizada (Cg ≥ 3%), por sonda", loc="left")
 ax.grid(axis="y", color=GRADE, lw=0.6)
 
 # 4) pareto de paradas

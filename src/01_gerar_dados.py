@@ -29,21 +29,22 @@ gabarito = []
 furos = []
 n = 0
 for linha in range(8):            # 8 seções N-S, espaçadas 50 m
-    for col in range(5):          # 5 furos por seção, espaçados 50 m
+    for col in range(8):          # 8 furos por seção, espaçados 50 m
         n += 1
         furos.append(dict(
             furo=f"FD-{n:03d}",
             este=round(381000 + col * 50 + rng.normal(0, 3), 2),
             norte=round(8805000 + linha * 50 + rng.normal(0, 3), 2),
             cota=round(612 + col * 4 - linha * 1.5 + rng.normal(0, 1), 2),
-            prof_final=float(rng.integers(12, 26) * 10),
+            # o furo precisa atravessar a camada mineralizada, que aprofunda para leste
+            prof_final=float(max(rng.integers(12, 26) * 10, np.ceil((45 + col * 22 + 35) / 10) * 10)),
             azimute=90.0,
             mergulho=-60.0,
             data_inicio=None,
             sonda=f"SD-0{1 + n % 3}",
         ))
 collar = pd.DataFrame(furos)
-datas = pd.date_range("2025-03-03", periods=len(collar), freq="5D")
+datas = pd.date_range("2024-03-04", periods=len(collar), freq="12D")   # campanha de mar/2024 a abr/2026
 collar["data_inicio"] = datas.strftime("%Y-%m-%d")
 
 # ---------------------------------------------------------------- geologia e teor "verdadeiro"
@@ -55,22 +56,31 @@ def zona_minerio(r):
     return topo, topo + esp
 
 registros_lit, teor_real = [], {}
+rl = np.random.default_rng(11)   # gerador separado para detalhes de litologia (não altera o resto da simulação)
+G, V = "GNAISSE KINZIGÍTICO GRAFITOSO", "VEIO PEGMATÓIDE"
 for r in collar.itertuples():
     sap = float(rng.integers(8, 22))
     z0, z1 = zona_minerio(r)
     z0, z1 = round(z0), round(z1)
     gran = r.prof_final - float(rng.integers(15, 40)) if rng.random() < 0.5 else None
-    lims = [(0, sap, "SAPROLITO"), (sap, z0, "XISTO"), (z0, z1, "XISTO GRAFITOSO")]
+    solo = float(rl.integers(1, 4))
+    # a camada rica em grafita (z0-z1) é descrita como o mesmo gnaisse, em intervalo próprio
+    lims = [(0, solo, "SOLO RESIDUAL", 0), (solo, sap, "SAPROLITO", 0), (sap, z0, G, 0), (z0, z1, G, 1)]
     if gran and gran > z1 + 5:
-        lims += [(z1, gran, "XISTO"), (gran, r.prof_final, "GNAISSE")]
+        fim_veio = min(gran + float(rl.integers(2, 6)), r.prof_final)
+        lims += [(z1, gran, G, 0), (gran, fim_veio, V, 0), (fim_veio, r.prof_final, G, 0)]
     else:
-        lims += [(z1, r.prof_final, "XISTO")]
-    for de, ate, lit in lims:
+        lims += [(z1, r.prof_final, G, 0)]
+    for de, ate, lt, zona in lims:
         if ate > de and de < r.prof_final:
-            registros_lit.append(dict(furo=r.furo, de=float(de), ate=float(min(ate, r.prof_final)), litologia=lit))
+            registros_lit.append(dict(furo=r.furo, de=float(de), ate=float(min(ate, r.prof_final)), litologia=lt, zona=zona))
     centro = 1 - abs((r.norte - 8805175) / 250)  # teor maior no meio do corpo
     teor_real[r.furo] = (z0, z1, 4.5 + 6.0 * max(centro, 0))
 lit = pd.DataFrame(registros_lit)
+def lito_de(furo, p, _g=lit.groupby("furo")):
+    g = _g.get_group(furo)
+    m = g[(g.de <= p) & (g.ate > p)]
+    return m.litologia.iloc[0] if len(m) else G
 
 # ---------------------------------------------------------------- amostragem (1 m) e teor verdadeiro
 am = []
@@ -84,6 +94,8 @@ for r in collar.itertuples():
             g = rng.lognormal(np.log(0.9), 0.5)
         else:
             g = rng.lognormal(np.log(0.10), 0.7)
+            lt_aqui = lito_de(r.furo, meio)
+            g *= {"SOLO RESIDUAL": 2.0, "SAPROLITO": 5.0, G: 6.0, V: 0.3}[lt_aqui]   # grafita disseminada no gnaisse
         am.append(dict(furo=r.furo, de=de, ate=de + 1.0, g=g))
 am = pd.DataFrame(am)
 # algumas lentes de grafita maciça (teor muito alto)
@@ -123,7 +135,7 @@ for i, r in am.iterrows():
     if no_lote % 25 == 0:                       # 1 branco a cada 25
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="BRANCO", ref="BRANCO-QZ", g=None))
     # duplicata de campo: 1 a cada 30 no estéril e 1 a cada 6 na zona mineralizada (onde a precisão importa)
-    zona = r.g > 1.0
+    zona = r.g > 2.0
     if no_lote % 30 == 0 or (zona and no_lote % 6 == 0):   # duplicata de campo (metade do testemunho)
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="DUP_CAMPO", ref=sid, g=r.g))
     if no_lote >= 180:
@@ -225,16 +237,19 @@ sv.at[k, "azimute"] = sv.at[k, "azimute"] + 38
 gabarito.append("Survey FD-008 a 90 m: salto de azimute (~38°)")
 
 # litologia: grafias diferentes e intervalos com problema
-for f, nome in [("FD-004", "Xisto"), ("FD-021", "xisto "), ("FD-036", "XISTO GRAF."), ("FD-012", "Saprolito")]:
-    m = lit.index[(lit.furo == f)][[1, 2, 0, 0][["FD-004", "FD-021", "FD-036", "FD-012"].index(f)]]
+for f, k, nome in [("FD-004", 2, "Gnaisse kinzigítico grafitoso"), ("FD-021", 2, "gnaisse kinzigitico grafitoso "),
+                   ("FD-036", 3, "GN. KINZ. GRAF."), ("FD-012", 1, "Saprolito")]:
+    m = lit.index[lit.furo == f][k]
     lit.at[m, "litologia"] = nome
-gabarito.append("Grafias diferentes de litologia (Xisto, 'xisto ', XISTO GRAF., Saprolito)")
-m = lit.index[lit.furo == "FD-014"][1]
+m = lit.index[lit.litologia == V][0]
+lit.at[m, "litologia"] = "PEGMATITO"
+gabarito.append(f"Grafias diferentes de litologia (Gnaisse kinzigítico grafitoso, sem acento, GN. KINZ. GRAF., Saprolito, PEGMATITO em {lit.at[m, 'furo']})")
+m = lit.index[lit.furo == "FD-014"][2]
 lit.at[m, "de"] = lit.at[m, "de"] - 2
 gabarito.append("FD-014: sobreposição de 2 m na litologia")
-m = lit.index[lit.furo == "FD-025"][2]
+m = lit.index[(lit.furo == "FD-025") & (lit.zona == 1)][0]
 lit.at[m, "de"] = lit.at[m, "de"] + 1.5
-gabarito.append("FD-025: lacuna de 1,5 m na litologia")
+gabarito.append("FD-025: lacuna de 1,5 m na litologia, no topo da zona mineralizada")
 m = lit.index[lit.furo == "FD-038"][-1]
 lit.at[m, "ate"] = lit.at[m, "ate"] + 6
 gabarito.append("FD-038: litologia passa da profundidade final")
@@ -258,7 +273,7 @@ ctrl = fl[fl.tipo != "ROTINA"][["amostra", "lote", "tipo", "ref"]].rename(column
 laudo = fl[["lote", "amostra", "cg_pct", "ct_pct"]]
 collar.to_csv(OUT / "collar.csv", index=False)
 sv.to_csv(OUT / "survey.csv", index=False)
-lit.to_csv(OUT / "litologia.csv", index=False)
+lit.drop(columns="zona").to_csv(OUT / "litologia.csv", index=False)
 amostragem.to_csv(OUT / "amostragem.csv", index=False)
 ctrl.to_csv(OUT / "insercao_controle.csv", index=False)
 laudo.to_csv(OUT / "laudo_laboratorio.csv", index=False)
@@ -269,21 +284,25 @@ padroes.to_csv(OUT / "padroes_certificados.csv", index=False)
 # Boletim diário das sondas: manobras (cada descida do barrilete) e turnos (horas e paradas).
 # Usa um gerador aleatório separado para não mudar os dados de QA/QC acima.
 rb = np.random.default_rng(7)
-VEL = {"SAPROLITO": 4.0, "XISTO": 2.6, "XISTO GRAFITOSO": 2.2, "GNAISSE": 1.7}       # m por hora efetiva
-REC = {"SAPROLITO": (0.80, 0.08), "XISTO": (0.97, 0.02), "XISTO GRAFITOSO": (0.945, 0.035), "GNAISSE": (0.98, 0.015)}
+VEL = {"SOLO RESIDUAL": 4.5, "SAPROLITO": 4.0, G: 2.5, "MINERIO": 2.2, V: 1.6}       # m por hora efetiva
+REC = {"SOLO RESIDUAL": (0.62, 0.10), "SAPROLITO": (0.80, 0.08), G: (0.97, 0.02), "MINERIO": (0.945, 0.035), V: (0.98, 0.015)}
 FATOR_SONDA = {"SD-01": 1.05, "SD-02": 1.00, "SD-03": 0.80}                          # SD-03 é a sonda mais antiga
 PARADAS = ["Manutenção mecânica", "Mudança de furo", "Espera de água", "Chuva / acesso",
            "Espera de material", "Medição de desvio (survey)"]
 P_PARADA = [0.30, 0.20, 0.15, 0.15, 0.12, 0.08]
-lit_ok = lit.assign(litologia=lit.litologia.str.strip().str.upper().replace({"XISTO GRAF.": "XISTO GRAFITOSO"}))
+lit_ok = lit.assign(litologia=lit.litologia.str.strip().str.upper().replace(
+    {"GNAISSE KINZIGITICO GRAFITOSO": G, "GN. KINZ. GRAF.": G, "PEGMATITO": V}))
 manobras, turnos = [], []
 for r in collar.itertuples():
     g = lit_ok[lit_ok.furo == r.furo].sort_values("de")
+    z0, z1, _ = teor_real[r.furo]
     def lito_em(p):
+        if z0 <= p < z1:
+            return "MINERIO"          # camada rica em grafita: mais friável
         m = g[(g.de <= p) & (g.ate > p)]
-        return m.litologia.iloc[0] if len(m) else "XISTO"
+        return m.litologia.iloc[0] if len(m) else G
     data = pd.Timestamp(r.data_inicio); turno = "DIA"; prof = 0.0
-    fator = FATOR_SONDA[r.sonda] * (0.75 if r.sonda == "SD-03" and data >= pd.Timestamp("2025-06-15") else 1.0)
+    fator = FATOR_SONDA[r.sonda] * (0.75 if r.sonda == "SD-03" and data >= pd.Timestamp("2025-04-01") else 1.0)
     primeiro = True
     while prof < r.prof_final - 1e-6:
         # horas paradas no turno de 12 h
@@ -304,7 +323,7 @@ for r in collar.itertuples():
             if horas_usadas + h > h_op:
                 break
             mu, sd = REC[lt]
-            if lt == "XISTO GRAFITOSO" and r.sonda == "SD-01":   # sonda mais rápida perde mais testemunho no minério friável
+            if lt == "MINERIO" and r.sonda == "SD-01":   # sonda mais rápida perde mais testemunho no minério friável
                 mu -= 0.08
             rec = float(np.clip(rb.normal(mu, sd), 0.4, 1.0))
             manobras.append(dict(furo=r.furo, sonda=r.sonda, data=data.strftime("%Y-%m-%d"), turno=turno,

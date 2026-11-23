@@ -1,5 +1,5 @@
 -- KPIs de sondagem a partir dos boletins diários (SQLite).
--- Tabelas: manobras, turnos, litologia, collar, meta. Cada bloco "-- name:" vira um CSV em saida/kpis/.
+-- Tabelas: manobras, turnos, litologia, zona_mineralizada (intercepts >= 3% Cg), meta. Cada bloco "-- name:" vira um CSV em saida/kpis/.
 
 -- name: k1_avanco_mensal_x_meta
 -- Metros perfurados por mês contra a meta, com acumulado (SUM OVER) e aderência.
@@ -10,7 +10,8 @@ WITH mensal AS (
 SELECT m.mes,
        m.realizado,
        t.meta_m AS meta,
-       ROUND(100.0 * m.realizado / t.meta_m, 1) AS aderencia_pct,
+       CASE WHEN t.meta_m >= 0.5 * MAX(t.meta_m) OVER ()          -- meses de plano parcial ficam sem aderência
+            THEN ROUND(100.0 * m.realizado / t.meta_m, 1) END AS aderencia_pct,
        SUM(m.realizado) OVER (ORDER BY m.mes) AS realizado_acum,
        SUM(t.meta_m)    OVER (ORDER BY m.mes) AS meta_acum
 FROM mensal m JOIN meta t ON t.mes = m.mes
@@ -47,17 +48,19 @@ WITH man AS (
     FROM manobras mb
     WHERE mb.recuperado_m <= mb.ate - mb.de      -- recuperação acima de 100% é erro de boletim
 )
-SELECT COALESCE(l.litologia, 'SEM DESCRIÇÃO') AS litologia,
+SELECT CASE WHEN z.furo IS NOT NULL THEN 'ZONA MINERALIZADA (Cg >= 3%)'
+            ELSE COALESCE(l.litologia, 'SEM DESCRIÇÃO') END AS litologia,
        COUNT(*) AS manobras,
        ROUND(100.0 * SUM(man.recuperado_m) / SUM(man.perfurado), 1) AS recuperacao_pct,
        ROUND(100.0 * SUM(CASE WHEN man.recuperado_m / man.perfurado < 0.9 THEN 1 ELSE 0 END) / COUNT(*), 1) AS pct_manobras_abaixo_90
 FROM man
 LEFT JOIN litologia l ON l.furo = man.furo AND man.meio >= l.de AND man.meio < l.ate
+LEFT JOIN zona_mineralizada z ON z.furo = man.furo AND man.meio >= z.de AND man.meio < z.ate
 GROUP BY 1
 ORDER BY recuperacao_pct;
 
 -- name: k5_furos_abaixo_meta_zona_mineralizada
--- Furos em que a recuperação no xisto grafitoso ficou abaixo de 90%: o teor desses trechos pode estar enviesado.
+-- Furos em que a recuperação na zona mineralizada ficou abaixo de 90%: o teor desses trechos pode estar enviesado.
 WITH man AS (
     SELECT mb.*, (mb.de + mb.ate) / 2.0 AS meio, mb.ate - mb.de AS perfurado
     FROM manobras mb WHERE mb.recuperado_m <= mb.ate - mb.de
@@ -66,14 +69,13 @@ SELECT man.furo, man.sonda,
        ROUND(SUM(man.perfurado), 1) AS metros_minerio,
        ROUND(100.0 * SUM(man.recuperado_m) / SUM(man.perfurado), 1) AS recuperacao_pct
 FROM man
-JOIN litologia l ON l.furo = man.furo AND man.meio >= l.de AND man.meio < l.ate
-WHERE l.litologia = 'XISTO GRAFITOSO'
+JOIN zona_mineralizada z ON z.furo = man.furo AND man.meio >= z.de AND man.meio < z.ate
 GROUP BY man.furo, man.sonda
 HAVING SUM(man.recuperado_m) / SUM(man.perfurado) < 0.9
 ORDER BY recuperacao_pct;
 
 -- name: k5b_recuperacao_minerio_por_sonda
--- Recuperação no xisto grafitoso por sonda x velocidade de perfuração.
+-- Recuperação na zona mineralizada por sonda x velocidade de perfuração.
 WITH man AS (
     SELECT mb.*, (mb.de + mb.ate) / 2.0 AS meio, mb.ate - mb.de AS perfurado
     FROM manobras mb WHERE mb.recuperado_m <= mb.ate - mb.de
@@ -82,8 +84,7 @@ rec AS (
     SELECT man.sonda,
            ROUND(100.0 * SUM(man.recuperado_m) / SUM(man.perfurado), 1) AS recuperacao_minerio_pct,
            COUNT(DISTINCT man.furo) AS furos
-    FROM man JOIN litologia l ON l.furo = man.furo AND man.meio >= l.de AND man.meio < l.ate
-    WHERE l.litologia = 'XISTO GRAFITOSO'
+    FROM man JOIN zona_mineralizada z ON z.furo = man.furo AND man.meio >= z.de AND man.meio < z.ate
     GROUP BY man.sonda
 ),
 vel AS (

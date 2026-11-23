@@ -1,4 +1,4 @@
 tabela,chave,regra,detalhe,acao
 manobras,FD-003 18.0-21.0 m,Recuperação acima de 100%,3.45 m recuperados em 3.0 m perfurados,REVISAR
-manobras,FD-023 99.0-102.0 m,Recuperação acima de 100%,3.45 m recuperados em 3.0 m perfurados,REVISAR
-turnos,SD-01 2025-08-12 DIA,Turno com mais de 12 h,12.0 h operando + 4.0 h parada,REVISAR
+manobras,FD-022 15.0-18.0 m,Recuperação acima de 100%,3.45 m recuperados em 3.0 m perfurados,REVISAR
+turnos,SD-02 2025-04-05 DIA,Turno com mais de 12 h,12.0 h operando + 4.0 h parada,REVISAR
