@@ -1,0 +1,22 @@
+Deriva do laboratório (viés positivo) nos lotes L021, L022, L023, L024
+Troca de padrão: AM101954 (L010) etiquetado PAD-MEDIO com valor de PAD-ALTO
+Padrão fora de 3 DP: AM106378 (L031)
+Contaminação de branco após amostras de pepita (> 15 g/t)
+Valor em ppb no lugar de ppm: AM101324
+Sem resultado (-): AM100585
+Sem resultado (IS): AM101766
+Sem resultado (NR): AM103062
+Valor negativo -0.005: AM103651
+Amostra repetida no laudo: AM104001
+Amostra sem laudo: AM106116
+FD-017 com este/norte trocados
+FD-029 sem cota
+FD-033 com mergulho positivo no collar
+Survey FD-008 a 90 m: salto de azimute (~38°)
+Grafias diferentes de litologia (Xisto, 'xisto ', QZ-SULFETO, Saprolito)
+FD-014: sobreposição de 2 m na litologia
+FD-025: lacuna de 1,5 m na litologia
+FD-038: litologia passa da profundidade final
+FD-019: intervalo de amostragem com de > ate
+FD-027: sobreposição de 0,5 m na amostragem
+Amostras com furo 'FD-40' (não existe no collar)
