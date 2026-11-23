@@ -265,6 +265,71 @@ laudo.to_csv(OUT / "laudo_laboratorio.csv", index=False)
 padroes.to_csv(OUT / "padroes_certificados.csv", index=False)
 (OUT / "_gabarito_problemas.txt").write_text("\n".join(gabarito) + "\n", encoding="utf-8")
 
+# ---------------------------------------------------------------- boletins de sondagem
+# Boletim diário das sondas: manobras (cada descida do barrilete) e turnos (horas e paradas).
+# Usa um gerador aleatório separado para não mudar os dados de QA/QC acima.
+rb = np.random.default_rng(7)
+VEL = {"SAPROLITO": 4.0, "XISTO": 2.6, "XISTO GRAFITOSO": 2.2, "GNAISSE": 1.7}       # m por hora efetiva
+REC = {"SAPROLITO": (0.80, 0.08), "XISTO": (0.97, 0.02), "XISTO GRAFITOSO": (0.945, 0.035), "GNAISSE": (0.98, 0.015)}
+FATOR_SONDA = {"SD-01": 1.05, "SD-02": 1.00, "SD-03": 0.80}                          # SD-03 é a sonda mais antiga
+PARADAS = ["Manutenção mecânica", "Mudança de furo", "Espera de água", "Chuva / acesso",
+           "Espera de material", "Medição de desvio (survey)"]
+P_PARADA = [0.30, 0.20, 0.15, 0.15, 0.12, 0.08]
+lit_ok = lit.assign(litologia=lit.litologia.str.strip().str.upper().replace({"XISTO GRAF.": "XISTO GRAFITOSO"}))
+manobras, turnos = [], []
+for r in collar.itertuples():
+    g = lit_ok[lit_ok.furo == r.furo].sort_values("de")
+    def lito_em(p):
+        m = g[(g.de <= p) & (g.ate > p)]
+        return m.litologia.iloc[0] if len(m) else "XISTO"
+    data = pd.Timestamp(r.data_inicio); turno = "DIA"; prof = 0.0
+    fator = FATOR_SONDA[r.sonda] * (0.75 if r.sonda == "SD-03" and data >= pd.Timestamp("2025-06-15") else 1.0)
+    primeiro = True
+    while prof < r.prof_final - 1e-6:
+        # horas paradas no turno de 12 h
+        h_par, motivo = 0.0, None
+        if primeiro:
+            h_par, motivo = round(rb.uniform(3, 6), 1), "Mudança de furo"; primeiro = False
+        elif rb.random() < 0.35:
+            motivo = rb.choice(PARADAS, p=P_PARADA)
+            if motivo == "Mudança de furo":
+                motivo = "Manutenção mecânica"
+            h_par = round(min(rb.gamma(2.0, 1.4) * (1.6 if r.sonda == "SD-03" and motivo == "Manutenção mecânica" else 1), 10), 1)
+        h_op = round(12 - h_par, 1)
+        metros_turno = 0.0; horas_usadas = 0.0
+        while horas_usadas < h_op and prof < r.prof_final - 1e-6:
+            lt = lito_em(prof + 0.1)
+            comp = min(3.0, r.prof_final - prof)
+            h = comp / (VEL[lt] * fator * rb.uniform(0.85, 1.15))
+            if horas_usadas + h > h_op:
+                break
+            mu, sd = REC[lt]
+            if lt == "XISTO GRAFITOSO" and r.sonda == "SD-01":   # sonda mais rápida perde mais testemunho no minério friável
+                mu -= 0.08
+            rec = float(np.clip(rb.normal(mu, sd), 0.4, 1.0))
+            manobras.append(dict(furo=r.furo, sonda=r.sonda, data=data.strftime("%Y-%m-%d"), turno=turno,
+                                 de=round(prof, 2), ate=round(prof + comp, 2), recuperado_m=round(comp * rec, 2)))
+            prof += comp; metros_turno += comp; horas_usadas += h
+        turnos.append(dict(data=data.strftime("%Y-%m-%d"), turno=turno, sonda=r.sonda, furo=r.furo,
+                           horas_operacao=h_op, horas_parada=h_par, motivo_parada=motivo,
+                           metros_perfurados=round(metros_turno, 2)))
+        if turno == "DIA":
+            turno = "NOITE"
+        else:
+            turno = "DIA"; data += pd.Timedelta(days=1)
+manobras = pd.DataFrame(manobras); turnos = pd.DataFrame(turnos)
+# problemas típicos de boletim digitado no campo
+for k in [120, 1405]:
+    manobras.at[k, "recuperado_m"] = round((manobras.at[k, "ate"] - manobras.at[k, "de"]) * 1.15, 2)
+    gabarito.append(f"Boletim: recuperação acima de 100% em {manobras.at[k,'furo']} {manobras.at[k,'de']} m")
+k = 300
+turnos.at[k, "horas_parada"] = turnos.at[k, "horas_parada"] + 4
+gabarito.append(f"Boletim: turno com mais de 12 h somadas ({turnos.at[k,'sonda']} {turnos.at[k,'data']} {turnos.at[k,'turno']})")
+manobras.to_csv(OUT / "boletim_manobras.csv", index=False)
+turnos.to_csv(OUT / "boletim_turnos.csv", index=False)
+(OUT / "_gabarito_problemas.txt").write_text("\n".join(gabarito) + "\n", encoding="utf-8")
+
 print(f"{len(collar)} furos, {collar.prof_final.sum():.0f} m perfurados")
 print(f"{len(amostragem)} amostras de rotina, {len(ctrl)} de controle, {len(lotes)} lotes")
 print(ctrl.tipo.value_counts().to_string())
+print(f"{len(manobras)} manobras, {len(turnos)} turnos de sonda")

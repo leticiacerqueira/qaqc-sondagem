@@ -23,3 +23,6 @@ FD-038: litologia passa da profundidade final
 FD-019: intervalo de amostragem com de > ate
 FD-027: sobreposição de 0,5 m na amostragem
 Amostras com furo 'FD-40' (não existe no collar)
+Boletim: recuperação acima de 100% em FD-003 18.0 m
+Boletim: recuperação acima de 100% em FD-023 99.0 m
+Boletim: turno com mais de 12 h somadas (SD-01 2025-08-12 DIA)
