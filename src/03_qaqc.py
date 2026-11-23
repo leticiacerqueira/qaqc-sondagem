@@ -1,5 +1,5 @@
 """
-QA/QC das análises de carbono grafítico (Cg %): padrões certificados, brancos e duplicatas.
+QA/QC das análises de carbono grafítico (Cg %): padrões certificados, brancos e duplicatas de campo.
 
 Pergunta: os teores de grafita deste banco são confiáveis o suficiente para entrar
 numa estimativa de recurso? Quais lotes precisam ser reanalisados?
@@ -8,7 +8,6 @@ Critérios usados (referências comuns na indústria, ajustáveis no topo do scr
   Padrão  : falha se fora de ±3 DP do valor certificado, ou 2 seguidos fora de ±2 DP do mesmo lado,
             ou se a média dos padrões do lote ficar além de ±1,5 DP (viés do laboratório)
   Branco  : falha se Cg > 10 x limite de detecção (0,20% Cg)
-  Duplicata de polpa : 90% dos pares com HARD <= 10%
   Duplicata de campo : 90% dos pares com HARD <= 20%
 HARD = metade da diferença relativa absoluta = |A - B| / (A + B).
 Pares com média abaixo de 10 x LD ficam fora da precisão (perto do LD o erro relativo explode).
@@ -25,7 +24,7 @@ TR, SAI = RAIZ / "dados/tratados", RAIZ / "saida"
 FIG = SAI / "figuras"; FIG.mkdir(parents=True, exist_ok=True)
 LD = 0.02  # % Cg
 LIM_BRANCO = 10 * LD
-CRIT_HARD = {"DUP_POLPA": 10, "DUP_CAMPO": 20}
+CRIT_HARD = {"DUP_CAMPO": 20}
 
 AZUL, LARANJA, VERMELHO = "#2a78d6", "#eb6834", "#e34948"
 TINTA, TINTA2, GRADE = "#0b0b0b", "#52514e", "#e4e3df"
@@ -78,7 +77,7 @@ br = br.merge(seq_lab[["amostra", "cg_anterior"]], on="amostra", how="left")
 br["falha"] = br.cg > LIM_BRANCO
 
 # ================================================================ DUPLICATAS
-dup = ctrl[ctrl.tipo.isin(["DUP_CAMPO", "DUP_POLPA"])].merge(
+dup = ctrl[ctrl.tipo == "DUP_CAMPO"].merge(
     amostras[["amostra", "cg"]].rename(columns={"amostra": "referencia", "cg": "cg_original"}),
     on="referencia", how="left").rename(columns={"cg": "cg_duplicata"})
 dup["media"] = (dup.cg_original + dup.cg_duplicata) / 2
@@ -180,7 +179,7 @@ fig.tight_layout(); fig.savefig(FIG / "brancos.png"); plt.close(fig)
 # 3) duplicatas: dispersão e curva HARD
 fig, axs = plt.subplots(1, 2, figsize=(10, 4.2))
 ax = axs[0]
-for tipo, cor, rot in [("DUP_CAMPO", LARANJA, "campo"), ("DUP_POLPA", AZUL, "polpa")]:
+for tipo, cor, rot in [("DUP_CAMPO", AZUL, "campo")]:
     g = dup_val[dup_val.tipo == tipo]
     ax.scatter(g.cg_original, g.cg_duplicata, s=14, color=cor, alpha=0.8, label=f"duplicata de {rot}",
                edgecolor="white", lw=0.4)
@@ -188,19 +187,19 @@ lim = [0.15, 50]
 ax.plot(lim, lim, color=TINTA2, lw=1)
 ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlim(lim); ax.set_ylim(lim)
 ax.set_xlabel("Cg original (%)"); ax.set_ylabel("Cg duplicata (%)")
-ax.set_title("Original x duplicata", loc="left"); ax.legend(frameon=False, fontsize=8)
+ax.set_title("Duplicatas de campo: original x duplicata", loc="left")
 ax.grid(color=GRADE, lw=0.6)
 ax = axs[1]
-for tipo, cor, rot in [("DUP_CAMPO", LARANJA, "campo"), ("DUP_POLPA", AZUL, "polpa")]:
+for tipo, cor, rot in [("DUP_CAMPO", AZUL, "campo")]:
     g = np.sort(dup_val[dup_val.tipo == tipo].hard.values)
     p90 = np.percentile(g, 90)
     ax.plot(np.arange(1, len(g) + 1) / len(g) * 100, g, color=cor, lw=2,
-            label=f"{rot}: 90% dos pares até {p90:.0f}% (limite {CRIT_HARD[tipo]}%)")
+            label=f"90% dos pares até {p90:.0f}% de diferença")
     ax.scatter([90], [p90], color=cor, s=30, zorder=3, edgecolor="white", lw=1)
-    ax.plot([60, 100], [CRIT_HARD[tipo]] * 2, color=cor, lw=1, ls=(0, (2, 2)))
+    ax.axhline(CRIT_HARD[tipo], color=TINTA2, lw=1, ls=(0, (4, 3)), label=f"limite: {CRIT_HARD[tipo]}%")
 ax.axvline(90, color="#a3a29c", lw=0.9, ls=(0, (4, 3)))
 ax.set_xlabel("% dos pares (ordenados)"); ax.set_ylabel("HARD (%)")
-ax.set_title("Precisão (HARD)", loc="left"); ax.legend(frameon=False, fontsize=8, loc="upper left")
+ax.set_title("Precisão das duplicatas de campo (HARD)", loc="left"); ax.legend(frameon=False, fontsize=8, loc="upper left")
 ax.set_ylim(0, 60); ax.grid(axis="y", color=GRADE, lw=0.6)
 fig.tight_layout(); fig.savefig(FIG / "duplicatas.png"); plt.close(fig)
 

@@ -49,7 +49,7 @@ ax.scatter(prov.este, prov.norte, s=prov.pct_metro * esc, facecolor="none", edge
            lw=1.6, ls=(0, (2, 1.5)), zorder=3, label="provisório (reanálise ou Cg > CT)")
 for k, r in enumerate(best.head(5).itertuples()):
     ax.annotate(f"{r.furo}\n{r.espessura_m:.0f} m @ {r.teor_cg_pct:.1f}% Cg", (r.este, r.norte),
-                xytext=(10, [6, -26, -26, 6, 6][k]), textcoords="offset points", fontsize=8, color=TINTA2,
+                xytext=(10, [6, -26, 6, -26, 6][k]), textcoords="offset points", fontsize=8, color=TINTA2,
                 bbox=dict(boxstyle="square,pad=0.15", fc="white", ec="none", alpha=0.85))
 ax.set_aspect("equal"); ax.ticklabel_format(useOffset=False, style="plain")
 ax.set_xlabel("Este (m, UTM)"); ax.set_ylabel("Norte (m, UTM)")

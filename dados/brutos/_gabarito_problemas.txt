@@ -1,17 +1,17 @@
 Deriva do laboratório (viés positivo) nos lotes L021, L022, L023, L024
-Troca de padrão: AM101946 (L010) etiquetado PAD-MEDIO com valor de PAD-ALTO
-Padrão fora de 3 DP: AM106360 (L031)
+Troca de padrão: AM101883 (L010) etiquetado PAD-MEDIO com valor de PAD-ALTO
+Padrão fora de 3 DP: AM106144 (L031)
 Contaminação de branco após lentes de grafita maciça (> 20% Cg)
-Valor em ppm no lugar de %: AM101314
-Cg e CT trocados: AM102307
-Cg e CT trocados: AM104714
-Cg e CT trocados: AM106818
-Sem resultado (-): AM100585
-Sem resultado (IS): AM101759
-Sem resultado (NR): AM103052
-Valor negativo -0.02: AM103642
+Valor em ppm no lugar de %: AM101272
+Cg e CT trocados: AM102229
+Cg e CT trocados: AM104553
+Cg e CT trocados: AM106586
+Sem resultado (-): AM100568
+Sem resultado (IS): AM101702
+Sem resultado (NR): AM102948
+Valor negativo -0.02: AM103517
 Amostra repetida no laudo: AM104001
-Amostra sem laudo: AM106099
+Amostra sem laudo: AM105894
 FD-017 com este/norte trocados
 FD-029 sem cota
 FD-033 com mergulho positivo no collar

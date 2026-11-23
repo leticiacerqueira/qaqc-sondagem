@@ -3,7 +3,7 @@ collar,FD-017,Coordenadas fora da faixa,este e norte trocados,CORRIGIDO
 collar,FD-029,Campo obrigatório vazio,cota ausente,REVISAR
 collar,FD-033,Collar x survey,mergulho +60 no collar e -60 no survey,CORRIGIDO
 survey,FD-008,Desvio brusco entre leituras,a 90 m: azimute variou 38.8°,REVISAR
-survey,FD-008,Desvio brusco entre leituras,a 120 m: azimute variou 37.4°,REVISAR
+survey,FD-008,Desvio brusco entre leituras,a 120 m: azimute variou 37.7°,REVISAR
 litologia,FD-004,Código fora do padrão,'Xisto' -> XISTO,CORRIGIDO
 litologia,FD-012,Código fora do padrão,'Saprolito' -> SAPROLITO,CORRIGIDO
 litologia,FD-021,Código fora do padrão,'xisto ' -> XISTO,CORRIGIDO
@@ -15,12 +15,12 @@ amostragem,FD-40,Furo não existe no collar,'FD-40' -> FD-040,CORRIGIDO
 amostragem,FD-019,de >= ate,56.0 - 55.0,CORRIGIDO
 amostragem,FD-027,Sobreposição,71.0 m começa antes de 71.5 m,REVISAR
 laudo,AM104001,Amostra repetida no laudo,mesmo resultado,CORRIGIDO
-laudo,AM100585,Sem resultado,código '-',REVISAR
-laudo,AM101759,Sem resultado,código 'IS',REVISAR
-laudo,AM103052,Sem resultado,código 'NR',REVISAR
-laudo,AM103642,Valor negativo,'-0.02' tratado como abaixo do LD,CORRIGIDO
-laudo,AM101314,Teor impossível (> 100%),219592 parece ppm -> 21.96%,CORRIGIDO
-laudo,AM102307,Cg maior que carbono total,"Cg 8.17% e CT 8.06%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
-laudo,AM104714,Cg maior que carbono total,"Cg 10.40% e CT 10.26%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
-laudo,AM106818,Cg maior que carbono total,"Cg 6.40% e CT 6.20%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
-laudo,AM106099,Amostra sem laudo,enviada e não devolvida,REVISAR
+laudo,AM100568,Sem resultado,código '-',REVISAR
+laudo,AM101702,Sem resultado,código 'IS',REVISAR
+laudo,AM102948,Sem resultado,código 'NR',REVISAR
+laudo,AM103517,Valor negativo,'-0.02' tratado como abaixo do LD,CORRIGIDO
+laudo,AM101272,Teor impossível (> 100%),203613 parece ppm -> 20.36%,CORRIGIDO
+laudo,AM102229,Cg maior que carbono total,"Cg 9.21% e CT 9.05%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
+laudo,AM104553,Cg maior que carbono total,"Cg 10.56% e CT 10.40%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
+laudo,AM106586,Cg maior que carbono total,"Cg 7.93% e CT 7.64%: provável troca de colunas no laboratório, pedir confirmação",REVISAR
+laudo,AM105894,Amostra sem laudo,enviada e não devolvida,REVISAR

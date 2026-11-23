@@ -6,7 +6,7 @@ no formato em que os dados costumam chegar de campo e do laboratório:
   survey.csv            desvio do furo (azimute e mergulho por profundidade)
   litologia.csv         descrição geológica por intervalo
   amostragem.csv        intervalos amostrados e número da amostra (folha de campo)
-  insercao_controle.csv amostras de controle inseridas no lote (padrões, brancos, duplicatas)
+  insercao_controle.csv amostras de controle inseridas no lote (padrões, brancos, duplicatas de campo)
   laudo_laboratorio.csv carbono grafítico (Cg %) e carbono total (CT %) devolvidos pelo laboratório, por lote
   padroes_certificados.csv valores certificados dos materiais de referência
 
@@ -122,12 +122,10 @@ for i, r in am.iterrows():
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="PADRAO", ref=p, g=None))
     if no_lote % 25 == 0:                       # 1 branco a cada 25
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="BRANCO", ref="BRANCO-QZ", g=None))
-    # duplicatas: 1 a cada 30 no estéril e 1 a cada 6 na zona mineralizada (onde a precisão importa)
+    # duplicata de campo: 1 a cada 30 no estéril e 1 a cada 6 na zona mineralizada (onde a precisão importa)
     zona = r.g > 1.0
     if no_lote % 30 == 0 or (zona and no_lote % 6 == 0):   # duplicata de campo (metade do testemunho)
         fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="DUP_CAMPO", ref=sid, g=r.g))
-    if no_lote % 30 == 15 or (zona and no_lote % 6 == 3):  # duplicata de polpa (mesmo pó, reanálise)
-        fluxo.append(dict(amostra=novo_num(), lote=lote_n, tipo="DUP_POLPA", ref=sid, g=r.g))
     if no_lote >= 180:
         lote_n += 1; no_lote = 0
 fl = pd.DataFrame(fluxo)
@@ -142,19 +140,20 @@ gabarito.append(f"Deriva do laboratório (viés positivo) nos lotes {', '.join(l
 
 res = []
 prev_g = 0.0
+contaminados = 0
 for r in fl.itertuples():
     b = vies[r.lote]
     if r.tipo == "ROTINA":
         v = r.g * np.exp(rng.normal(0, 0.03)) * b
     elif r.tipo == "DUP_CAMPO":
         v = r.g * np.exp(rng.normal(0, 0.16)) * b
-    elif r.tipo == "DUP_POLPA":
-        v = r.g * np.exp(rng.normal(0, 0.04)) * b
     elif r.tipo == "PADRAO":
         c, s = pmap.loc[r.ref]
         v = rng.normal(c, s * 0.9) * b
     else:  # branco
-        v = abs(rng.normal(0.008, 0.006)) + (prev_g * 0.011 if prev_g > 20 and rng.random() < 0.1 else 0)
+        v = abs(rng.normal(0.008, 0.006))
+        if prev_g > 24 and contaminados < 2:     # arraste no pulverizador após grafita maciça
+            v += prev_g * rng.uniform(0.008, 0.013); contaminados += 1
     prev_g = r.g if r.tipo == "ROTINA" else 0.0
     res.append(v)
 fl["v"] = res

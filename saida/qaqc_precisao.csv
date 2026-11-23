@@ -1,3 +1,2 @@
 tipo,pares_validos,criterio,pct_dentro,hard_p90,resultado
-DUP_CAMPO,114,90% com HARD <= 20%,98.2,13.7,APROVADO
-DUP_POLPA,116,90% com HARD <= 10%,100.0,4.6,APROVADO
+DUP_CAMPO,120,90% com HARD <= 20%,99.2,13.0,APROVADO
