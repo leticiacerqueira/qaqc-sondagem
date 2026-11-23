@@ -1,0 +1,418 @@
+<title>Painel da Sondagem</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Painel da campanha de sondagem de grafita: avanço x meta, produtividade das sondas, recuperação de testemunho e paradas.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: faixa de cabeçalho com filtros, linha de indicadores, grade 2 colunas de gráficos,
+   caixa de testemunho em largura total e tabela de furos. Tons de grafite + 3 cores fixas, uma por sonda. */
+:root{
+  --bg:#f3f4f2; --surface:#ffffff; --ink:#16191a; --ink2:#4e5458; --muted:#80868a; --line:#dcdfdb; --grid:#eceeea;
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --meta:#8a8f93; --crit:#c93a3a; --crit-bg:#fbeaea; --ok:#1d7f47; --ok-bg:#e6f4ec;
+  --l-sap:#d8b47a; --l-xis:#a9afb2; --l-gra:#2c3134; --l-gna:#e2c6bf; --l-sem:#ffffff;
+  --f-disp:"Archivo","Helvetica Neue",Arial,sans-serif; --f-body:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#111313; --surface:#1a1d1e; --ink:#eceeec; --ink2:#b5babb; --muted:#868c8d; --line:#2d3233; --grid:#23282a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --meta:#8f9597; --crit:#e66767; --crit-bg:#3a2121; --ok:#4cbb7a; --ok-bg:#1b3326;
+  --l-sap:#b8924f; --l-xis:#6c7477; --l-gra:#050606; --l-gna:#a7857d; --l-sem:#1a1d1e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#111313; --surface:#1a1d1e; --ink:#eceeec; --ink2:#b5babb; --muted:#868c8d; --line:#2d3233; --grid:#23282a;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --meta:#8f9597; --crit:#e66767; --crit-bg:#3a2121; --ok:#4cbb7a; --ok-bg:#1b3326;
+  --l-sap:#b8924f; --l-xis:#6c7477; --l-gra:#050606; --l-gna:#a7857d; --l-sem:#1a1d1e; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.5 var(--f-body);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{padding-block:28px 18px;display:grid;gap:14px}
+.eyebrow{font:500 .72rem/1.2 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font:800 clamp(1.7rem,3.6vw,2.4rem)/1.05 var(--f-disp);margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{color:var(--ink2);max-width:68ch;margin:0}
+.filters{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding-block:12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.flabel{font:500 .72rem/1 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:3px;background:var(--surface);gap:2px}
+.seg button{all:unset;cursor:pointer;font:600 .82rem/1 var(--f-body);padding:.5rem .8rem;border-radius:999px;color:var(--ink2);display:inline-flex;align-items:center;gap:.4rem}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:focus-visible,select:focus-visible,.tbl tr:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.fgroup{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+select{font:500 .85rem var(--f-body);color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:.4rem .5rem}
+main{display:grid;gap:18px;padding-block:18px 40px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}
+.kpi{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;display:grid;gap:6px;align-content:start;min-width:0}
+.kpi .k{font:500 .72rem/1.2 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.kpi .v{font:700 1.75rem/1 var(--f-disp);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.kpi .v small{font:500 .85rem var(--f-body);color:var(--ink2);margin-left:.25rem}
+.kpi .d{font-size:.82rem;color:var(--ink2)}
+.pill{justify-self:start;display:inline-flex;align-items:center;gap:.35rem;font:600 .74rem/1 var(--f-body);padding:.32rem .55rem;border-radius:999px}
+.pill.ok{background:var(--ok-bg);color:var(--ok)} .pill.crit{background:var(--crit-bg);color:var(--crit)}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;display:grid;gap:10px;min-width:0;align-content:start}
+.card.wide{grid-column:1/-1}
+.card h2{font:700 1.02rem/1.25 var(--f-disp);margin:0;text-wrap:balance}
+.card .note{font-size:.82rem;color:var(--ink2);margin:0}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:.8rem;color:var(--ink2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:10px;border-radius:2px;display:inline-block;flex:none}
+.sw.dash{height:0;border-top:2px dashed var(--meta);border-radius:0}
+.sw.lost{background:repeating-linear-gradient(135deg,transparent 0 3px,var(--muted) 3px 4px);border:1px solid var(--line)}
+.chart{width:100%;position:relative;min-width:0}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+svg text{fill:var(--ink2);font-family:var(--f-body);font-size:11px}
+svg .tick{fill:var(--muted);font-family:var(--f-mono);font-size:10.5px}
+.tip{position:fixed;pointer-events:none;z-index:20;background:var(--ink);color:var(--bg);font:500 .78rem/1.35 var(--f-body);padding:.45rem .6rem;border-radius:7px;max-width:240px;opacity:0;transition:opacity .08s}
+.tip b{font-weight:700}
+.boxhead{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between}
+.tbl-wrap{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-size:.86rem;font-variant-numeric:tabular-nums}
+.tbl th{font:500 .7rem/1.2 var(--f-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);text-align:left;padding:.45rem .5rem;border-bottom:1px solid var(--line)}
+.tbl td{padding:.5rem;border-bottom:1px solid var(--grid)}
+.tbl td.n,.tbl th.n{text-align:right}
+.tbl tbody tr{cursor:pointer}
+.tbl tbody tr:hover,.tbl tbody tr[aria-selected="true"]{background:var(--grid)}
+.bar{height:6px;border-radius:3px;background:var(--grid);position:relative;min-width:70px}
+.bar i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--crit)}
+.qa{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.qa div{display:grid;gap:2px}
+.qa b{font:700 1.3rem/1.1 var(--f-disp);font-variant-numeric:tabular-nums}
+.qa span{font-size:.82rem;color:var(--ink2)}
+footer{color:var(--muted);font-size:.8rem;padding-block:0 32px}
+footer a,.card a{color:var(--s1)}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+@media (max-width:560px){.tbl th:nth-child(5),.tbl td:nth-child(5){display:none}.tbl td,.tbl th{white-space:nowrap}}
+@media (prefers-reduced-motion:reduce){.tip{transition:none}}
+</style>
+
+<div class="wrap">
+  <header class="top">
+    <span class="eyebrow">Exploração de grafita · campanha 2025 · dados simulados</span>
+    <h1>Painel da Sondagem</h1>
+    <p class="sub">Acompanhamento da campanha de sondagem diamantada a partir dos boletins diários das três sondas: avanço contra a meta, produtividade, recuperação de testemunho e paradas. Os boletins passam por validação antes de entrar no painel.</p>
+    <div class="filters" role="group" aria-label="Filtros">
+      <div class="fgroup"><span class="flabel">Sonda</span><div class="seg" id="seg"></div></div>
+      <div class="fgroup"><span class="flabel">Período</span>
+        <label class="flabel" for="mIni" hidden>Mês inicial</label><select id="mIni"></select>
+        <span class="flabel">a</span>
+        <label class="flabel" for="mFim" hidden>Mês final</label><select id="mFim"></select>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="kpis" id="kpis" aria-label="Indicadores"></section>
+
+    <div class="grid">
+      <section class="card wide">
+        <h2 id="t-avanco">Avanço acumulado x meta</h2>
+        <div class="legend" id="lg-avanco"></div>
+        <div class="chart" id="c-avanco"></div>
+        <p class="note" id="n-avanco"></p>
+      </section>
+      <section class="card">
+        <h2>Produtividade mensal por sonda</h2>
+        <div class="legend" id="lg-prod"></div>
+        <div class="chart" id="c-prod"></div>
+        <p class="note">Metros perfurados por hora de operação. A SD-03 perde ritmo a partir de junho.</p>
+      </section>
+      <section class="card">
+        <h2>Recuperação de testemunho no xisto grafitoso</h2>
+        <div class="legend"><span><i class="sw dash"></i>meta de 90%</span></div>
+        <div class="chart" id="c-rec"></div>
+        <p class="note">Abaixo da meta, o teor do trecho pode estar enviesado: parte do minério friável se perde na perfuração.</p>
+      </section>
+      <section class="card wide">
+        <h2>Horas paradas por motivo</h2>
+        <div class="chart" id="c-par"></div>
+      </section>
+
+      <section class="card wide">
+        <div class="boxhead">
+          <h2>Caixa de testemunho</h2>
+          <div class="fgroup"><label class="flabel" for="selFuro">Furo</label><select id="selFuro"></select></div>
+        </div>
+        <p class="note" id="n-box"></p>
+        <div class="legend" id="lg-box"></div>
+        <div class="chart" id="c-box"></div>
+      </section>
+
+      <section class="card wide">
+        <h2>Furos abaixo da meta de recuperação no minério</h2>
+        <p class="note">Clique num furo para ver a caixa de testemunho.</p>
+        <div class="tbl-wrap"><table class="tbl" id="tbl"><thead><tr><th>Furo</th><th>Sonda</th><th class="n">Metros no minério</th><th class="n">Recuperação</th><th>Distância da meta</th></tr></thead><tbody></tbody></table></div>
+      </section>
+
+      <section class="card wide">
+        <h2>Qualidade dos dados (QA/QC)</h2>
+        <div class="qa" id="qa"></div>
+        <p class="note">Detalhes da validação do banco e do QA/QC das análises no <a href="https://github.com/leticiacerqueira/qaqc-sondagem" target="_blank" rel="noopener">repositório do projeto</a>.</p>
+      </section>
+    </div>
+  </main>
+  <footer>Leticia Santos Cerqueira · Analista de Dados · <a href="https://leticiacerqueira.github.io" target="_blank" rel="noopener">portfólio</a> · Dados simulados de uma campanha de exploração de grafita, gerados para o projeto.</footer>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script>
+const D = /*__DADOS__*/null;
+const SONDAS = ["SD-01","SD-02","SD-03"];
+const COR = {"SD-01":"--s1","SD-02":"--s2","SD-03":"--s3"};
+const LITCOR = ["--l-sap","--l-xis","--l-gra","--l-gna","--l-sem"];
+const LITNOME = ["Saprolito","Xisto","Xisto grafitoso","Gnaisse","Sem descrição"];
+const MES = "jan fev mar abr mai jun jul ago set out nov dez".split(" ");
+const META_REC = 90, ORE = 2;
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const nf = (x, d=0) => x.toLocaleString("pt-BR", {minimumFractionDigits:d, maximumFractionDigits:d});
+const mesNome = m => { const [a,b] = m.split("-"); return MES[+b-1] + "/" + a.slice(2); };
+const furoIdx = Object.fromEntries(D.furos.map((f,i)=>[f.id,i]));
+const sondaFuro = D.furos.map(f=>f.sonda);
+const meses = Object.keys(D.meta).sort();
+const st = {sonda:"TODAS", ini:meses[0], fim:meses[meses.length-1], furo:"FD-012"};
+try { const s = JSON.parse(localStorage.getItem("painel-sondagem")||"{}"); if (s.sonda) st.sonda = s.sonda; } catch(e) {}
+
+/* ---------- filtros ---------- */
+const seg = document.getElementById("seg");
+["TODAS", ...SONDAS].forEach(s => {
+  const b = document.createElement("button");
+  b.type = "button"; b.dataset.s = s;
+  b.innerHTML = s === "TODAS" ? "Todas" : `<i class="dot" style="background:var(${COR[s]})"></i>${s}`;
+  b.onclick = () => { st.sonda = s; try{localStorage.setItem("painel-sondagem", JSON.stringify({sonda:s}))}catch(e){} render(); };
+  seg.appendChild(b);
+});
+const mIni = document.getElementById("mIni"), mFim = document.getElementById("mFim");
+meses.forEach(m => { mIni.add(new Option(mesNome(m), m)); mFim.add(new Option(mesNome(m), m)); });
+mIni.value = st.ini; mFim.value = st.fim;
+mIni.onchange = () => { st.ini = mIni.value; if (st.ini > st.fim) { st.fim = st.ini; mFim.value = st.fim; } render(); };
+mFim.onchange = () => { st.fim = mFim.value; if (st.fim < st.ini) { st.ini = st.fim; mIni.value = st.ini; } render(); };
+const selFuro = document.getElementById("selFuro");
+selFuro.onchange = () => { st.furo = selFuro.value; drawBox(); markRow(); };
+
+/* ---------- tooltip ---------- */
+const tip = document.getElementById("tip");
+function showTip(html, ev){ tip.innerHTML = html; tip.style.opacity = 1;
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY - h - 10;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y < 8) y = ev.clientY + 16;
+  tip.style.left = x + "px"; tip.style.top = y + "px"; }
+function hideTip(){ tip.style.opacity = 0; }
+
+/* ---------- svg helpers ---------- */
+const NS = "http://www.w3.org/2000/svg";
+function el(tag, attrs={}, parent){ const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (tag === "text" && attrs.fill) e.style.fill = attrs.fill;   // a regra CSS de texto não pode sobrescrever cores pontuais
+  if (parent) parent.appendChild(e); return e; }
+function svgIn(id, h){ const box = document.getElementById(id); box.innerHTML = "";
+  const w = Math.max(280, box.clientWidth); const s = el("svg", {viewBox:`0 0 ${w} ${h}`, role:"img"}, box);
+  return {s, w, h, box}; }
+function niceMax(v){ const p = Math.pow(10, Math.floor(Math.log10(v))); const n = v/p;
+  return (n<=1?1:n<=2?2:n<=2.5?2.5:n<=5?5:10)*p; }
+function yAxis(s, x0, x1, y0, y1, max, steps, fmt){
+  for (let i=0;i<=steps;i++){ const v = max*i/steps, y = y0 - (y0-y1)*i/steps;
+    el("line",{x1:x0,x2:x1,y1:y,y2:y,stroke:css("--grid"),"stroke-width":1},s);
+    const t = el("text",{x:x0-8,y:y+3.5,"text-anchor":"end",class:"tick"},s); t.textContent = fmt(v); } }
+
+/* ---------- dados filtrados ---------- */
+const inPer = d => { const m = d.slice(0,7); return m >= st.ini && m <= st.fim; };
+const okS = s => st.sonda === "TODAS" || s === st.sonda;
+function turnosF(){ return D.turnos.filter(t => t[8] && okS(t[2]) && inPer(t[0])); }
+function manF(){ return D.manobras.filter(m => m[6] && okS(sondaFuro[m[0]]) && inPer(m[5])); }
+
+/* ---------- indicadores ---------- */
+function kpis(){
+  const T = turnosF(), M = manF();
+  const metros = T.reduce((a,t)=>a+t[7],0), hop = T.reduce((a,t)=>a+t[4],0), hpar = T.reduce((a,t)=>a+t[5],0);
+  const fat = st.sonda === "TODAS" ? 1 : 1/3;
+  const meta = meses.filter(m=>m>=st.ini && m<=st.fim).reduce((a,m)=>a+D.meta[m],0)*fat;
+  const ore = M.filter(m=>m[4]===ORE), per = ore.reduce((a,m)=>a+m[2]-m[1],0), rec = ore.reduce((a,m)=>a+m[3],0);
+  const recPct = per ? rec/per*100 : NaN;
+  const mot = {}; T.forEach(t=>{ if (t[6]) mot[t[6]] = (mot[t[6]]||0)+t[5]; });
+  const top = Object.entries(mot).sort((a,b)=>b[1]-a[1])[0];
+  const ader = meta ? metros/meta*100 : NaN;
+  const pill = (ok, txtOk, txtBad) => ok ? `<span class="pill ok">✓ ${txtOk}</span>` : `<span class="pill crit">✕ ${txtBad}</span>`;
+  document.getElementById("kpis").innerHTML = `
+    <div class="kpi"><span class="k">Metros perfurados</span><span class="v">${nf(metros)}<small>m</small></span>
+      <span class="d">meta ${nf(meta)} m${st.sonda==="TODAS"?"":" (1/3 da campanha)"}</span>${pill(ader>=99.95, nf(ader,1)+"% da meta", nf(ader,1)+"% da meta")}</div>
+    <div class="kpi"><span class="k">Produtividade</span><span class="v">${hop?nf(metros/hop,2):"–"}<small>m/h</small></span>
+      <span class="d">${nf(T.length)} turnos · ${hop?nf(metros/T.length,1):"–"} m por turno</span></div>
+    <div class="kpi"><span class="k">Disponibilidade</span><span class="v">${hop?nf(hop/(hop+hpar)*100,1):"–"}<small>%</small></span>
+      <span class="d">${nf(hop)} h operando · ${nf(hpar)} h paradas</span></div>
+    <div class="kpi"><span class="k">Recuperação no minério</span><span class="v">${isNaN(recPct)?"–":nf(recPct,1)}<small>%</small></span>
+      <span class="d">${nf(per)} m de xisto grafitoso</span>${isNaN(recPct)?"":pill(recPct>=META_REC,"na meta de 90%","abaixo da meta de 90%")}</div>
+    <div class="kpi"><span class="k">Principal parada</span><span class="v" style="font-size:1.15rem;line-height:1.15">${top?top[0]:"–"}</span>
+      <span class="d">${top?nf(top[1])+" h ("+nf(top[1]/hpar*100)+"% das paradas)":""}</span></div>`;
+}
+
+/* ---------- avanço ---------- */
+function drawAvanco(){
+  const T = turnosF(); const cor = st.sonda==="TODAS" ? css("--s1") : css(COR[st.sonda]);
+  const fat = st.sonda === "TODAS" ? 1 : 1/3;
+  const porDia = {}; T.forEach(t=>{ porDia[t[0]] = (porDia[t[0]]||0)+t[7]; });
+  const d0 = new Date(st.ini+"-01T12:00:00"), dFim = new Date(st.fim+"-01T12:00:00"); dFim.setMonth(dFim.getMonth()+1); dFim.setDate(0);
+  const dias = []; for (let d=new Date(d0); d<=dFim; d.setDate(d.getDate()+1)) dias.push(d.toISOString().slice(0,10));
+  // meta acumulada: distribuída por dia dentro de cada mês
+  // meta: ritmo de 1.250 m/mês a partir do início da campanha, até completar os metros planejados
+  const totalMeta = Object.values(D.meta).reduce((a,b)=>a+b,0)*fat;
+  let metaAntes = 0; for (let d=new Date(meses[0]+"-03T12:00:00"); d<d0; d.setDate(d.getDate()+1)) {
+    metaAntes += 1250*12/365*fat; }
+  metaAntes = Math.min(metaAntes, totalMeta);
+  const metaDia = d => d < meses[0]+"-03" ? 0 : 1250*12/365*fat;   // mesmo ritmo diário do relatório
+  let ar=0, am=metaAntes; const real=[], plano=[]; const base = metaAntes;
+  const ultimoDado = Object.keys(porDia).sort().pop();
+  dias.forEach(d=>{ ar += porDia[d]||0; am = Math.min(totalMeta, am + metaDia(d)); if (!ultimoDado || d <= ultimoDado) real.push(ar); plano.push(am - base); });
+  am -= base;
+  const {s,w,h} = svgIn("c-avanco", 260);
+  const L=58,R=16,Tp=12,B=28, x = i => L + (w-L-R)*i/(dias.length-1||1);
+  const max = niceMax(Math.max(am, ar)*1.05||1), y = v => (h-B) - (h-B-Tp)*v/max;
+  yAxis(s,L,w-R,h-B,Tp,max,4,v=>nf(v));
+  dias.forEach((d,i)=>{ if (d.slice(8)==="01"){ const t = el("text",{x:x(i),y:h-8,"text-anchor":"middle",class:"tick"},s); t.textContent = MES[+d.slice(5,7)-1]; } });
+  el("polyline",{points:plano.map((v,i)=>`${x(i)},${y(v)}`).join(" "),fill:"none",stroke:css("--meta"),"stroke-width":2,"stroke-dasharray":"6 5"},s);
+  el("path",{d:`M${x(0)},${y(0)} `+real.map((v,i)=>`L${x(i)},${y(v)}`).join(" ")+` L${x(real.length-1)},${y(0)} Z`,fill:cor,opacity:.1},s);
+  el("polyline",{points:real.map((v,i)=>`${x(i)},${y(v)}`).join(" "),fill:"none",stroke:cor,"stroke-width":2.2,"stroke-linejoin":"round"},s);
+  const li = real.length-1; if (li>=0){ el("circle",{cx:x(li),cy:y(real[li]),r:4.5,fill:cor,stroke:css("--surface"),"stroke-width":2},s); }
+  const cross = el("line",{y1:Tp,y2:h-B,stroke:css("--muted"),"stroke-width":1,opacity:0},s);
+  const hit = el("rect",{x:L,y:Tp,width:w-L-R,height:h-B-Tp,fill:"transparent"},s);
+  hit.onmousemove = ev => { const r = s.getBoundingClientRect(); const px = (ev.clientX-r.left)*w/r.width;
+    const i = Math.max(0, Math.min(dias.length-1, Math.round((px-L)/(w-L-R)*(dias.length-1))));
+    cross.setAttribute("x1",x(i)); cross.setAttribute("x2",x(i)); cross.setAttribute("opacity",.6);
+    const d = dias[i]; showTip(`<b>${d.slice(8)}/${d.slice(5,7)}/${d.slice(0,4)}</b><br>Realizado: ${i<real.length?nf(real[i])+" m":"–"}<br>Meta: ${nf(plano[i])} m`, ev); };
+  hit.onmouseleave = () => { cross.setAttribute("opacity",0); hideTip(); };
+  document.getElementById("lg-avanco").innerHTML = `<span><i class="sw" style="background:${cor}"></i>realizado${st.sonda==="TODAS"?"":" "+st.sonda}</span><span><i class="sw dash"></i>meta${st.sonda==="TODAS"?" (1.250 m/mês)":" (1/3 da meta)"}</span>`;
+  const n = document.getElementById("n-avanco");
+  if (st.sonda==="TODAS" && st.ini===meses[0] && st.fim===meses[meses.length-1]){
+    const fimMeta = dias[plano.findIndex(v=>v>=totalMeta-0.5)], fimReal = ultimoDado;
+    const atraso = Math.round((new Date(fimReal)-new Date(fimMeta))/864e5);
+    n.textContent = `A meta previa terminar os ${nf(am)} m em ${fimMeta.slice(8)}/${fimMeta.slice(5,7)}. A campanha terminou em ${fimReal.slice(8)}/${fimReal.slice(5,7)}, ${atraso} dias depois.`;
+  } else { n.textContent = `No período: ${nf(ar)} m perfurados contra ${nf(am)} m de meta (${nf(am?ar/am*100:0)}%).`; }
+}
+
+/* ---------- produtividade mensal ---------- */
+function drawProd(){
+  const mm = meses.filter(m=>m>=st.ini && m<=st.fim);
+  const ser = SONDAS.map(s=>({s, v: mm.map(m=>{ const T = D.turnos.filter(t=>t[8] && t[2]===s && t[0].startsWith(m));
+    const hop = T.reduce((a,t)=>a+t[4],0); return hop ? T.reduce((a,t)=>a+t[7],0)/hop : null; })}));
+  const {s,w,h} = svgIn("c-prod", 240);
+  const L=40,R=52,Tp=12,B=28, x = i => L + (w-L-R)*(mm.length>1? i/(mm.length-1) : .5);
+  const max = 3, y = v => (h-B) - (h-B-Tp)*v/max;
+  yAxis(s,L,w-R,h-B,Tp,max,3,v=>nf(v,1));
+  mm.forEach((m,i)=>{ const t = el("text",{x:x(i),y:h-8,"text-anchor":"middle",class:"tick"},s); t.textContent = MES[+m.slice(5)-1]; });
+  ser.forEach(o=>{ const on = st.sonda==="TODAS" || st.sonda===o.s, c = css(COR[o.s]);
+    const pts = o.v.map((v,i)=>v==null?null:[x(i),y(v)]).filter(Boolean);
+    el("polyline",{points:pts.map(p=>p.join(",")).join(" "),fill:"none",stroke:c,"stroke-width":on?2.2:1.5,opacity:on?1:.3},s);
+    pts.forEach(p=>el("circle",{cx:p[0],cy:p[1],r:on?4:3,fill:c,stroke:css("--surface"),"stroke-width":2,opacity:on?1:.3},s));
+    const last = pts[pts.length-1]; if (last && on){ const t = el("text",{x:last[0]+9,y:last[1]+4,"font-weight":600},s); t.textContent = o.s; } });
+  const hit = el("rect",{x:L,y:Tp,width:w-L-R,height:h-B-Tp,fill:"transparent"},s);
+  hit.onmousemove = ev => { const r = s.getBoundingClientRect(); const px = (ev.clientX-r.left)*w/r.width;
+    const i = mm.length>1 ? Math.max(0,Math.min(mm.length-1,Math.round((px-L)/(w-L-R)*(mm.length-1)))) : 0;
+    showTip(`<b>${mesNome(mm[i])}</b><br>`+ser.map(o=>`${o.s}: ${o.v[i]==null?"–":nf(o.v[i],2)+" m/h"}`).join("<br>"), ev); };
+  hit.onmouseleave = hideTip;
+  document.getElementById("lg-prod").innerHTML = SONDAS.map(s=>`<span><i class="sw" style="background:var(${COR[s]})"></i>${s}</span>`).join("");
+}
+
+/* ---------- recuperação por sonda ---------- */
+function drawRec(){
+  const vals = SONDAS.map(s=>{ const M = D.manobras.filter(m=>m[6] && m[4]===ORE && sondaFuro[m[0]]===s && inPer(m[5]));
+    const p = M.reduce((a,m)=>a+m[2]-m[1],0); return {s, v: p ? M.reduce((a,m)=>a+m[3],0)/p*100 : null, p}; });
+  const {s,w,h} = svgIn("c-rec", 240);
+  const L=40,R=12,Tp=14,B=44, max=100, y = v => (h-B)-(h-B-Tp)*v/max;
+  yAxis(s,L,w-R,h-B,Tp,max,4,v=>nf(v)+"%");
+  const bw = Math.min(70,(w-L-R)/3*.5);
+  vals.forEach((o,i)=>{ const cx = L+(w-L-R)*(i+.5)/3, on = st.sonda==="TODAS"||st.sonda===o.s, c = css(COR[o.s]);
+    if (o.v!=null){ const top = y(o.v), r = 4;
+      el("path",{d:`M${cx-bw/2},${h-B} V${top+r} Q${cx-bw/2},${top} ${cx-bw/2+r},${top} H${cx+bw/2-r} Q${cx+bw/2},${top} ${cx+bw/2},${top+r} V${h-B} Z`,fill:c,opacity:on?1:.3},s);
+      const t = el("text",{x:cx,y:top+30,"text-anchor":"middle","font-weight":700,"font-size":12.5,fill:"#ffffff"},s); t.textContent = nf(o.v,1)+"%";
+      if (o.v < META_REC){ const k = el("text",{x:cx,y:h-6,"text-anchor":"middle","font-size":10.5,"font-weight":600,fill:css("--crit")},s); k.textContent = "✕ abaixo da meta"; }
+      const hit = el("rect",{x:cx-bw/2-8,y:Tp,width:bw+16,height:h-B-Tp,fill:"transparent"},s);
+      hit.onmousemove = ev => showTip(`<b>${o.s}</b><br>Recuperação no xisto grafitoso: ${nf(o.v,1)}%<br>${nf(o.p)} m perfurados no minério`, ev);
+      hit.onmouseleave = hideTip; }
+    const t = el("text",{x:cx,y:h-B+16,"text-anchor":"middle",class:"tick"},s); t.textContent = o.s; });
+  el("line",{x1:L,x2:w-R,y1:y(META_REC),y2:y(META_REC),stroke:css("--meta"),"stroke-width":1.5,"stroke-dasharray":"6 5"},s);
+}
+
+/* ---------- paradas ---------- */
+function drawPar(){
+  const T = turnosF(); const mot = {}; T.forEach(t=>{ if (t[6]) mot[t[6]] = (mot[t[6]]||0)+t[5]; });
+  const arr = Object.entries(mot).sort((a,b)=>b[1]-a[1]); const tot = arr.reduce((a,b)=>a+b[1],0);
+  const box = document.getElementById("c-par"), estreito = box.clientWidth < 560;
+  const rowH = estreito ? 42 : 30, {s,w,h} = svgIn("c-par", Math.max(60, arr.length*rowH+8));
+  const L = estreito ? 0 : Math.min(210, w*.42), R = 96, max = arr.length ? arr[0][1] : 1, cor = st.sonda==="TODAS"?css("--s1"):css(COR[st.sonda]);
+  let acc = 0;
+  arr.forEach(([m,v],i)=>{ acc += v; const y0 = 4+i*rowH, bw = (w-L-R)*v/max;
+    const t = estreito ? el("text",{x:0,y:y0+12,"font-size":12},s) : el("text",{x:L-10,y:y0+rowH/2+1,"text-anchor":"end","font-size":12},s); t.textContent = m;
+    const by = estreito ? y0+18 : y0+6, bh = estreito ? 16 : rowH-12;
+    el("rect",{x:L,y:by,width:Math.max(2,bw),height:bh,rx:4,fill:cor},s);
+    const vt = el("text",{x:L+bw+8,y:by+bh/2+4,"font-size":11.5},s); vt.textContent = `${nf(v)} h · ${nf(v/tot*100)}%`;
+    const pa = acc/tot*100;
+    const hit = el("rect",{x:0,y:y0,width:w,height:rowH,fill:"transparent"},s);
+    hit.onmousemove = ev => showTip(`<b>${m}</b><br>${nf(v,1)} h paradas (${nf(v/tot*100,1)}%)<br>Acumulado: ${nf(pa,1)}%`, ev);
+    hit.onmouseleave = hideTip; });
+}
+
+/* ---------- caixa de testemunho ---------- */
+function fillFuros(){
+  const opts = D.furos.filter(f=>okS(f.sonda)).map(f=>f.id);
+  if (!opts.includes(st.furo)) st.furo = opts[0];
+  selFuro.innerHTML = ""; opts.forEach(f=>selFuro.add(new Option(`${f} · ${D.furos[furoIdx[f]].sonda}`, f))); selFuro.value = st.furo;
+}
+function drawBox(){
+  const fi = furoIdx[st.furo], F = D.furos[fi];
+  const M = D.manobras.filter(m=>m[0]===fi).sort((a,b)=>a[1]-b[1]);
+  const LINHA = 30, nl = Math.ceil(F.prof/LINHA), rowH = 34, gap = 10;
+  const {s,w,h} = svgIn("c-box", nl*(rowH+gap)+6);
+  const L = 54, R = 8, sx = v => L + (w-L-R)*v/LINHA;
+  for (let r=0;r<nl;r++){ const y0 = 3+r*(rowH+gap);
+    el("rect",{x:L,y:y0,width:w-L-R,height:rowH,fill:"none",stroke:css("--line"),"stroke-width":1,rx:3},s);
+    const t = el("text",{x:L-8,y:y0+rowH/2+4,"text-anchor":"end",class:"tick"},s); t.textContent = `${r*LINHA} m`; }
+  const defs = el("defs",{},s); const pat = el("pattern",{id:"lost",width:6,height:6,patternUnits:"userSpaceOnUse",patternTransform:"rotate(45)"},defs);
+  el("line",{x1:0,y1:0,x2:0,y2:6,stroke:css("--muted"),"stroke-width":1.2},pat);
+  let oreP=0, oreR=0, nBad=0;
+  M.forEach(m=>{ const r = Math.floor(m[1]/LINHA+1e-9), y0 = 3+r*(rowH+gap)+3, x0 = sx(m[1]-r*LINHA), x1 = sx(m[2]-r*LINHA);
+    const comp = m[2]-m[1], fr = Math.min(1, m[3]/comp), xr = x0+(x1-x0)*fr;
+    const lc = css(LITCOR[m[4]]);
+    el("rect",{x:x0+.6,y:y0,width:Math.max(0,xr-x0-1.2),height:rowH-6,fill:lc,rx:1.5,stroke:m[4]===4?css("--muted"):"none","stroke-dasharray":"3 2"},s);
+    if (fr<1) el("rect",{x:xr,y:y0,width:Math.max(0,x1-xr-.6),height:rowH-6,fill:"url(#lost)"},s);
+    const bad = m[4]===ORE && fr < META_REC/100;
+    if (m[4]===ORE){ oreP += comp; oreR += Math.min(m[3],comp); if (bad) nBad++; }
+    if (bad) el("rect",{x:x0+.6,y:y0+rowH-4,width:x1-x0-1.2,height:3,fill:css("--crit"),rx:1},s);
+    const hit = el("rect",{x:x0,y:y0-3,width:x1-x0,height:rowH,fill:"transparent"},s);
+    hit.onmousemove = ev => showTip(`<b>${nf(m[1],1)}–${nf(m[2],1)} m</b><br>${LITNOME[m[4]]}<br>Recuperado: ${nf(m[3],2)} m de ${nf(comp,1)} m (${nf(m[3]/comp*100)}%)${m[6]?"":"<br>⚠ acima de 100%: erro de boletim"}${bad?"<br>✕ abaixo da meta no minério":""}`, ev);
+    hit.onmouseleave = hideTip; });
+  const n = document.getElementById("n-box");
+  n.textContent = `${F.id} · sonda ${F.sonda} · ${nf(F.prof)} m · cada linha tem 30 m e cada bloco é uma manobra de 3 m. ` +
+    (oreP ? `No xisto grafitoso: ${nf(oreR/oreP*100,1)}% de recuperação em ${nf(oreP)} m, ${nBad} manobra(s) abaixo de 90%.` : "Sem xisto grafitoso neste furo.");
+  document.getElementById("lg-box").innerHTML = LITNOME.slice(0,4).map((l,i)=>`<span><i class="sw" style="background:var(${LITCOR[i]})"></i>${l}</span>`).join("") +
+    `<span><i class="sw lost"></i>testemunho perdido</span><span><i class="sw" style="background:var(--crit);height:3px"></i>minério abaixo de 90%</span>`;
+}
+
+/* ---------- tabela ---------- */
+function drawTbl(){
+  const by = {}; D.manobras.forEach(m=>{ if (!m[6] || m[4]!==ORE || !inPer(m[5]) || !okS(sondaFuro[m[0]])) return;
+    const o = by[m[0]] ||= {p:0,r:0}; o.p += m[2]-m[1]; o.r += m[3]; });
+  const rows = Object.entries(by).map(([i,o])=>({f:D.furos[i], p:o.p, v:o.r/o.p*100})).filter(r=>r.v<META_REC).sort((a,b)=>a.v-b.v);
+  const tb = document.querySelector("#tbl tbody");
+  tb.innerHTML = rows.length ? rows.map(r=>`<tr tabindex="0" data-f="${r.f.id}"><td><b>${r.f.id}</b></td><td><span style="display:inline-flex;align-items:center;gap:6px"><i class="dot" style="background:var(${COR[r.f.sonda]})"></i>${r.f.sonda}</span></td><td class="n">${nf(r.p)} m</td><td class="n">${nf(r.v,1)}%</td><td><div class="bar" title="${nf(META_REC-r.v,1)} pontos abaixo da meta"><i style="width:${Math.min(100,(META_REC-r.v)/15*100)}%"></i></div></td></tr>`).join("")
+    : `<tr><td colspan="5">Nenhum furo abaixo da meta no filtro escolhido.</td></tr>`;
+  tb.querySelectorAll("tr[data-f]").forEach(tr=>{ const go = () => { st.furo = tr.dataset.f; if (!okS(D.furos[furoIdx[st.furo]].sonda)) {} selFuro.value = st.furo; drawBox(); markRow();
+      document.getElementById("c-box").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block:"center"}); };
+    tr.onclick = go; tr.onkeydown = e => { if (e.key==="Enter"||e.key===" ") { e.preventDefault(); go(); } }; });
+  markRow();
+}
+function markRow(){ document.querySelectorAll("#tbl tr[data-f]").forEach(tr=>tr.setAttribute("aria-selected", tr.dataset.f===st.furo)); }
+
+function drawQA(){ const q = D.qaqc;
+  document.getElementById("qa").innerHTML = `
+    <div><b>${q.ocorrencias}</b><span>problemas encontrados no banco · ${q.corrigidas} corrigidos com rastreio</span></div>
+    <div><b>${q.reprovados} de ${q.lotes}</b><span>lotes de laboratório para reanálise (padrões e brancos)</span></div>
+    <div><b>${q.provisorios} de ${q.interceptos}</b><span>interceptos significativos que ficam provisórios</span></div>`; }
+
+function render(){
+  seg.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed", b.dataset.s===st.sonda));
+  kpis(); drawAvanco(); drawProd(); drawRec(); drawPar(); fillFuros(); drawBox(); drawTbl(); drawQA();
+}
+render();
+let rt; addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 150); });
+matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+new MutationObserver(render).observe(document.documentElement, {attributes:true, attributeFilter:["data-theme"]});
+</script>

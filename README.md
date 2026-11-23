@@ -18,6 +18,7 @@ Python (pandas, NumPy, Matplotlib) · SQL (SQLite: CTEs, window functions, gaps 
 | `src/02_validar_banco.py` | Valida e trata o banco. Cada problema vira uma linha em `saida/log_validacao.csv` com a regra que falhou e a ação: **CORRIGIDO** (correção objetiva e rastreável) ou **REVISAR** (depende de quem conhece o furo ou de confirmação do laboratório). |
 | `src/03_qaqc.py` | Cartas de controle dos padrões, gráfico de brancos, precisão das duplicatas de campo (HARD) e decisão por lote: **APROVADO** ou **REANALISAR**. |
 | `src/04_consultas_sql.py` + `sql/consultas.sql` | Carrega tudo num SQLite e calcula interceptos significativos, ranking de furos, teor por litologia, impacto do QA/QC e pendências por furo. |
+| `src/06_painel_html.py` | Gera o **painel interativo** da campanha (`painel/index.html`, HTML único sem dependências), com filtro por sonda e período, indicadores, gráficos com detalhes ao passar o mouse e a caixa de testemunho de cada furo. |
 | `src/05_kpis_sondagem.py` + `sql/kpis_sondagem.sql` | Valida os boletins diários das sondas (2.555 manobras e 378 turnos) e calcula os KPIs da campanha: avanço x meta, produtividade e disponibilidade por sonda, recuperação de testemunho e horas paradas. Exporta tabelas prontas para Power BI em `saida/kpis/`. |
 
 ## 1. Validação do banco
@@ -75,6 +76,8 @@ Dos **43 interceptos significativos** (≥ 3% Cg e ≥ 2 m, calculados em SQL co
 Consultas em [`sql/consultas.sql`](sql/consultas.sql) e resultados em [`saida/sql/`](saida/sql/). A lista de pendências por furo ([`05_pendencias_por_furo.csv`](saida/sql/05_pendencias_por_furo.csv)) é o que vai para a equipe de geologia.
 
 ## 4. KPIs da campanha de sondagem
+**Painel interativo:** https://leticiacerqueira.github.io/painel-sondagem/
+
 Os boletins diários das sondas (cada manobra do barrilete e as horas de cada turno) passam pela mesma lógica de validação: 2 manobras com **recuperação acima de 100%** e 1 turno com **16 h somadas** num turno de 12 h foram para revisão e ficaram fora dos indicadores ([log](saida/kpis/log_boletins.csv)).
 
 ![Painel de sondagem](saida/figuras/painel_sondagem.png)
@@ -104,6 +107,7 @@ python src/02_validar_banco.py
 python src/03_qaqc.py
 python src/04_consultas_sql.py
 python src/05_kpis_sondagem.py
+python src/06_painel_html.py
 ```
 
 ## Autora
